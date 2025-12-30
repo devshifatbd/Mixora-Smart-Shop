@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
-import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc, query, orderBy, getDoc, Timestamp } from 'firebase/firestore';
-import { Product, Order, CartItem } from '../types';
+import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc, query, orderBy } from 'firebase/firestore';
+import { Product, Order } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Package, ShoppingBag, DollarSign, Upload, Trash2, LogOut, Loader2, 
+  Package, ShoppingBag, Trash2, LogOut, Loader2, 
   Home, AlertCircle, Link as LinkIcon, Image as ImageIcon, Plus, 
-  MoreVertical, Edit, Copy, Save, X, CheckSquare, Square, Eye, Search, Filter,
-  Users, ChevronLeft, ChevronRight, TrendingUp, Calendar, Truck, CheckCircle, XCircle, FileText, Printer, MapPin, Phone, Mail, Store, Minus, PlusCircle
+  Edit, Copy, Save, X, CheckSquare, Square, Eye, Search,
+  Users, ChevronLeft, ChevronRight, Calendar, Truck, FileText, Printer, Store
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { categoriesList } from '../data';

@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Product } from '../types';
 import ProductCard from '../components/ProductCard';
-import { Loader2, AlertCircle, Filter, X } from 'lucide-react';
+import { Loader2, AlertCircle, Filter } from 'lucide-react';
 import { categoriesList } from '../data';
 
 interface CategoryPageProps {

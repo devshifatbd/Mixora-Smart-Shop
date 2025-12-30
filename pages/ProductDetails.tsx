@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Product } from '../types';
-import { db } from '../firebase';
-import { doc, getDoc, collection, setDoc, Timestamp, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
-import { Minus, Plus, Loader2, ArrowRight, CheckCircle2, ShieldCheck, Truck, PackageCheck, Banknote, ShoppingCart, Sparkles, Star, Cpu, Layers, Zap, Award, ThumbsUp, Info } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
+import { db } from '../firebase';
+import { doc, getDoc, collection, setDoc, Timestamp, query, limit, getDocs, where, orderBy } from 'firebase/firestore';
+import { Minus, Plus, Loader2, ArrowRight, CheckCircle2, ShieldCheck, Truck, PackageCheck, Banknote, ShoppingCart, Sparkles, Cpu, Layers, Zap, Award, ThumbsUp, Info } from 'lucide-react';
 
 interface ProductDetailsProps {
   addToCart: (product: Product) => void;
