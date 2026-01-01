@@ -26,5 +26,13 @@ service cloud.firestore {
       // কুপন তৈরি বা ডিলিট শুধুমাত্র অ্যাডমিন করতে পারবে
       allow write: if request.auth != null && request.auth.token.email == 'mixorasmartshop@gmail.com';
     }
+
+    // কনটেন্ট ম্যানেজমেন্ট রুলস (Top Bar, Hero, Flash Sale)
+    match /siteContent/{documentId} {
+      // সবাই কনটেন্ট দেখতে পারবে (Public Read)
+      allow read: if true;
+      // শুধুমাত্র অ্যাডমিন এডিট করতে পারবে
+      allow write: if request.auth != null && request.auth.token.email == 'mixorasmartshop@gmail.com';
+    }
   }
 }

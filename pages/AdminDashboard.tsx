@@ -1,33 +1,66 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
-import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc, query, orderBy, Timestamp, setDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc, query, orderBy, Timestamp, setDoc, getDoc } from 'firebase/firestore';
 import { Product, Order, Coupon } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { 
   Package, ShoppingBag, Trash2, LogOut, Loader2, 
   Plus, Edit, Save, X, CheckSquare, Search,
   Users, ChevronLeft, ChevronRight, Truck, FileText, Printer, Store,
-  LayoutDashboard, BarChart3, DollarSign, Ticket, Download, UploadCloud, Video, XCircle, Ban, Minus
+  LayoutDashboard, BarChart3, DollarSign, Ticket, Download, UploadCloud, Video, XCircle, Ban, Minus,
+  Calendar, Activity, TrendingUp, Clock, CheckCircle, Monitor, Layers, Image as ImageIcon, CreditCard, Menu
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { categoriesList } from '../data';
 
 const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'customers' | 'coupons'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'customers' | 'coupons' | 'content'>('overview');
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true); // Default collapsed
   const { logout, isAdmin } = useAuth();
   const navigate = useNavigate();
+
+  // --- Report State ---
+  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // YYYY-MM
 
   // --- Product Management State ---
   const [viewMode, setViewMode] = useState<'list' | 'form'>('list');
   const [formMode, setFormMode] = useState<'add' | 'edit'>('add');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // --- Content Management State ---
+  const [siteContent, setSiteContent] = useState({
+    topBar: { 
+        message: '🎉 মিক্সোরা সুপার শপ - এ প্রথম অর্ডারে ডেলিভারি চার্জ ফ্রি! কোড:', 
+        code: 'NEW24' 
+    },
+    heroSlides: [
+      { 
+        id: 1, 
+        bgImage: "https://i.pinimg.com/736x/2b/fe/52/2bfe5239a045e652557d8bb742fc28e2.jpg", 
+        title: "রিভিউ & উইন",
+        highlight: "১০০০ টাকার ভাউচার", 
+        description: "মিক্সোরা সুপার শপ থেকে পণ্য কিনে রিভিউ দিয়ে জিতে নিন নিশ্চিত উপহার।",
+        btnText: "শপ করুন",
+        btnColor: "bg-white text-blue-600"
+      }
+    ],
+    middleBanner: {
+        image: "https://i.pinimg.com/1200x/ee/06/b5/ee06b50d83e0da8b9f57eae955246ccd.jpg",
+        title: "YEAR END SALE",
+        badge: "Limited Time Offer",
+        description: "আমাদের সব প্রিমিয়াম কালেকশনে পাচ্ছেন বিশেষ ছাড়। স্টক শেষ হওয়ার আগেই অর্ডার করুন।",
+        btnText: "অফারগুলো দেখুন"
+    },
+    flashSale: { 
+        endTime: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString().slice(0, 16) // Default 5 hours later
+    }
+  });
 
   // Form Data State
   const initialFormState: Partial<Product> = {
@@ -114,39 +147,101 @@ const AdminDashboard: React.FC = () => {
       const couponSnapshot = await getDocs(collection(db, 'coupons'));
       const couponList = couponSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Coupon));
       setCoupons(couponList);
+
+      // Fetch Site Content
+      const topBarDoc = await getDoc(doc(db, 'siteContent', 'topBar'));
+      if (topBarDoc.exists()) {
+          setSiteContent(prev => ({ ...prev, topBar: topBarDoc.data() as any }));
+      }
+      const heroDoc = await getDoc(doc(db, 'siteContent', 'hero'));
+      if (heroDoc.exists()) {
+          setSiteContent(prev => ({ ...prev, heroSlides: heroDoc.data().slides }));
+      }
+      const middleBannerDoc = await getDoc(doc(db, 'siteContent', 'middleBanner'));
+      if (middleBannerDoc.exists()) {
+          setSiteContent(prev => ({ ...prev, middleBanner: middleBannerDoc.data() as any }));
+      }
+      const flashSaleDoc = await getDoc(doc(db, 'siteContent', 'flashSale'));
+      if (flashSaleDoc.exists()) {
+          setSiteContent(prev => ({ ...prev, flashSale: flashSaleDoc.data() as any }));
+      }
+
     } catch (error) {
       console.error("Error fetching data:", error);
     }
     setLoading(false);
   };
 
-  const isSameDay = (d1: Date, d2: Date) => d1.toDateString() === d2.toDateString();
-  const isSameMonth = (d1: Date, d2: Date) => d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
+  // --- CONTENT SAVING ---
+  const handleSaveContent = async () => {
+      setUploading(true);
+      try {
+          await setDoc(doc(db, 'siteContent', 'topBar'), siteContent.topBar);
+          await setDoc(doc(db, 'siteContent', 'hero'), { slides: siteContent.heroSlides });
+          await setDoc(doc(db, 'siteContent', 'middleBanner'), siteContent.middleBanner);
+          await setDoc(doc(db, 'siteContent', 'flashSale'), siteContent.flashSale);
+          alert('Content updated successfully!');
+      } catch (error) {
+          console.error("Error saving content:", error);
+          alert('Failed to save content.');
+      }
+      setUploading(false);
+  };
 
+  // --- STATS CALCULATION (Based on Selected Month) ---
   const calculateStats = () => {
-      const today = new Date(); 
-      const dailyOrders = orders.filter(o => o.createdAt && isSameDay(o.createdAt.toDate(), today));
-      const monthOrders = orders.filter(o => o.createdAt && isSameMonth(o.createdAt.toDate(), today));
-      
+      const selectedDate = new Date(selectedMonth);
+      const year = selectedDate.getFullYear();
+      const month = selectedDate.getMonth();
+
+      // Filter orders by selected month
+      const filteredOrders = orders.filter(o => {
+          if (!o.createdAt) return false;
+          const date = o.createdAt.toDate();
+          return date.getFullYear() === year && date.getMonth() === month;
+      });
+
+      // Today's calculation (Independent of filter, usually for live tracking)
+      const today = new Date();
+      const todayOrders = orders.filter(o => o.createdAt && o.createdAt.toDate().toDateString() === today.toDateString());
+
       return {
-          today: {
-              sales: dailyOrders.reduce((acc, o) => acc + o.totalAmount, 0),
-              count: dailyOrders.length,
-              pendingAmount: dailyOrders.filter(o => o.status === 'Pending').reduce((acc, o) => acc + o.totalAmount, 0),
-              deliveryAmount: dailyOrders.filter(o => o.status === 'Delivered').reduce((acc, o) => acc + o.totalAmount, 0),
-              pending: dailyOrders.filter(o => o.status === 'Pending').length,
-              delivered: dailyOrders.filter(o => o.status === 'Delivered').length,
-              canceled: dailyOrders.filter(o => o.status === 'Cancelled' || o.status === 'Order Canceled').length,
+          filtered: {
+              totalSales: filteredOrders.reduce((acc, o) => acc + o.totalAmount, 0),
+              totalOrders: filteredOrders.length,
+              pending: filteredOrders.filter(o => o.status === 'Pending').length,
+              delivered: filteredOrders.filter(o => o.status === 'Delivered').length,
+              cancelled: filteredOrders.filter(o => ['Cancelled', 'Order Canceled'].includes(o.status)).length,
+              deliveryAmount: filteredOrders.filter(o => o.status === 'Delivered').reduce((acc, o) => acc + o.totalAmount, 0),
           },
-          month: {
-              sales: monthOrders.reduce((acc, o) => acc + o.totalAmount, 0),
-              count: monthOrders.length,
-              orders: monthOrders 
+          today: {
+              count: todayOrders.length,
+              sales: todayOrders.reduce((acc, o) => acc + o.totalAmount, 0),
           }
       };
   };
 
   const stats = calculateStats();
+
+  // --- TOP SELLING & RECENT ---
+  const getTopSellingProducts = () => {
+      const productCounts: Record<string, { name: string; count: number; image: string; price: number }> = {};
+      orders.forEach(order => {
+          if (!['Cancelled', 'Order Canceled'].includes(order.status)) {
+              order.items.forEach(item => {
+                  if (productCounts[item.id]) {
+                      productCounts[item.id].count += item.quantity;
+                  } else {
+                      productCounts[item.id] = { name: item.name, count: item.quantity, image: item.image, price: item.price };
+                  }
+              });
+          }
+      });
+      return Object.values(productCounts).sort((a, b) => b.count - a.count).slice(0, 5);
+  };
+
+  const topSelling = getTopSellingProducts();
+  const recentOrders = orders.slice(0, 5); // Last 5 orders
 
   const generateMonthlyReport = () => {
      alert('Report generation feature coming soon!');
@@ -520,8 +615,63 @@ const AdminDashboard: React.FC = () => {
     );
   }
 
+  // --- Helper for Order Card Styling ---
+  const getOrderStyles = (status: string) => {
+    switch (status) {
+        case 'Pending': 
+        case 'Order Placed':
+            return {
+                bg: 'bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100',
+                border: 'border-orange-200',
+                text: 'text-orange-900',
+                icon: Clock,
+                iconColor: 'text-orange-300',
+                badge: 'bg-orange-500 text-white shadow-orange-200'
+            };
+        case 'Delivered':
+        case 'Order Completed':
+            return {
+                bg: 'bg-gradient-to-br from-emerald-50 via-green-50 to-emerald-100',
+                border: 'border-emerald-200',
+                text: 'text-emerald-900',
+                icon: CheckCircle,
+                iconColor: 'text-emerald-300',
+                badge: 'bg-emerald-600 text-white shadow-emerald-200'
+            };
+        case 'Cancelled':
+        case 'Order Canceled':
+            return {
+                bg: 'bg-gradient-to-br from-red-50 via-rose-50 to-red-100',
+                border: 'border-red-200',
+                text: 'text-red-900',
+                icon: XCircle,
+                iconColor: 'text-red-300',
+                badge: 'bg-red-500 text-white shadow-red-200'
+            };
+        case 'Order Shipped':
+        case 'Order Confirmed':
+            return {
+                bg: 'bg-gradient-to-br from-blue-50 via-cyan-50 to-blue-100',
+                border: 'border-blue-200',
+                text: 'text-blue-900',
+                icon: Truck,
+                iconColor: 'text-blue-300',
+                badge: 'bg-blue-500 text-white shadow-blue-200'
+            };
+        default:
+            return {
+                bg: 'bg-white',
+                border: 'border-gray-200',
+                text: 'text-gray-800',
+                icon: Package,
+                iconColor: 'text-gray-200',
+                badge: 'bg-gray-700 text-white'
+            };
+    }
+  };
+
   return (
-    <div className="h-screen bg-[#F0F2F5] flex flex-col md:flex-row font-sans overflow-hidden">
+    <div className="fixed inset-0 z-[10] bg-[#F0F2F5] flex flex-col md:flex-row font-sans overflow-hidden">
       
       {/* --- SIDEBAR BACKDROP (Mobile) --- */}
       <div className={`
@@ -531,9 +681,9 @@ const AdminDashboard: React.FC = () => {
 
       {/* --- SIDEBAR --- */}
       <aside className={`
-        fixed md:relative inset-y-0 left-0 z-[80] bg-white shadow-2xl md:shadow-none transition-transform duration-300 flex flex-col border-r border-gray-100 h-full
-        ${isSidebarOpen ? 'translate-x-0 w-[280px]' : '-translate-x-full w-0'}
-        md:translate-x-0 ${isSidebarCollapsed ? 'md:w-24' : 'md:w-[280px]'}
+        fixed md:relative inset-y-0 left-0 z-[80] bg-white transition-all duration-300 flex flex-col border-r border-gray-100 h-full overflow-hidden
+        ${isSidebarOpen ? 'translate-x-0 w-[280px] shadow-2xl' : '-translate-x-full w-0 shadow-none'}
+        md:translate-x-0 ${isSidebarCollapsed ? 'md:w-24' : 'md:w-[280px] md:shadow-none'}
       `}>
          {/* Sidebar Header */}
           <div className="hidden md:flex p-6 items-center justify-between h-[80px] shrink-0">
@@ -563,6 +713,7 @@ const AdminDashboard: React.FC = () => {
           <NavItem id="products" label="পণ্যসমূহ" icon={Package} active={activeTab === 'products'} />
           <NavItem id="orders" label="অর্ডার লিস্ট" icon={ShoppingBag} active={activeTab === 'orders'} />
           <NavItem id="coupons" label="কুপন ম্যানেজমেন্ট" icon={Ticket} active={activeTab === 'coupons'} />
+          <NavItem id="content" label="কনটেন্ট" icon={Monitor} active={activeTab === 'content'} />
           <NavItem id="customers" label="কাস্টমার" icon={Users} active={activeTab === 'customers'} />
           
           <div className="pt-6 mt-6 border-t border-gray-100">
@@ -583,8 +734,24 @@ const AdminDashboard: React.FC = () => {
       </aside>
 
       {/* --- MAIN CONTENT --- */}
-      <main className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 pb-24 md:pb-8 bg-[#F0F2F5] relative z-0">
+      <main className="flex-1 overflow-y-auto custom-scrollbar bg-[#F0F2F5] relative z-0">
         
+        {/* Mobile Header Bar - Opens Sidebar, NO Logout Button */}
+        <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-gray-100 shrink-0 sticky top-0 z-[60]">
+            <div className="flex items-center gap-3">
+                <button onClick={() => setIsSidebarOpen(true)} className="p-2.5 bg-gray-50 text-gray-700 rounded-xl hover:bg-gray-100 transition shadow-sm border border-gray-200">
+                    <Menu size={20} />
+                </button>
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gradient-to-br from-primary to-gray-800 rounded-lg flex items-center justify-center text-white shadow-sm">
+                        <BarChart3 size={16} />
+                    </div>
+                    <span className="font-black text-gray-900 text-lg tracking-tight">Admin</span>
+                </div>
+            </div>
+        </div>
+
+        <div className="p-4 md:p-8 pb-24 md:pb-8">
         {/* --- OVERVIEW TAB --- */}
         {activeTab === 'overview' && (
            <div className="space-y-8 animate-fade-in">
@@ -593,9 +760,19 @@ const AdminDashboard: React.FC = () => {
                     <h2 className="text-3xl font-black text-gray-900 tracking-tight">হ্যালো, অ্যাডমিন 👋</h2>
                     <p className="text-gray-500 font-medium mt-1">আজকের ব্যবসার আপডেট দেখে নিন</p>
                 </div>
-                <div className="flex gap-2 items-center">
-                    <button onClick={generateMonthlyReport} className="bg-green-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-green-700 shadow-md">
-                        <Download size={18} /> ডাউনলোড রিপোর্ট
+                <div className="flex flex-wrap gap-2 items-center">
+                    <div className="flex items-center bg-white px-3 py-2 rounded-xl border border-gray-200 shadow-sm">
+                        <Calendar size={16} className="text-gray-900 mr-2" />
+                        <input 
+                            type="month" 
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
+                            className="bg-transparent outline-none text-sm font-bold text-gray-700"
+                            style={{ colorScheme: 'light' }}
+                        />
+                    </div>
+                    <button onClick={generateMonthlyReport} className="bg-green-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-green-700 shadow-md text-sm">
+                        <Download size={16} /> ডাউনলোড রিপোর্ট
                     </button>
                 </div>
              </div>
@@ -606,29 +783,29 @@ const AdminDashboard: React.FC = () => {
                     <div className="absolute top-0 right-0 p-4 opacity-20 transform group-hover:scale-125 transition-transform duration-500"><BarChart3 size={70} /></div>
                     <div className="relative z-10">
                         <div className="bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 backdrop-blur-sm shadow-inner"><DollarSign className="h-6 w-6 text-white" /></div>
-                        <p className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">মোট সেল (আজকে)</p>
-                        <h3 className="text-4xl font-black tracking-tight">৳{stats.today.sales.toLocaleString()}</h3>
-                        <div className="mt-2 text-xs opacity-80 font-bold">এই মাসে: ৳{stats.month.sales.toLocaleString()}</div>
+                        <p className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">মোট সেল (সিলেক্টেড মাস)</p>
+                        <h3 className="text-4xl font-black tracking-tight">৳{stats.filtered.totalSales.toLocaleString()}</h3>
+                        <div className="mt-2 text-xs opacity-80 font-bold">আজকে: ৳{stats.today.sales.toLocaleString()}</div>
                     </div>
                 </div>
 
                 <div className="bg-gradient-to-br from-blue-400 to-cyan-600 p-6 rounded-[2rem] shadow-xl shadow-cyan-200 text-white relative overflow-hidden group hover:-translate-y-1 transition duration-300">
                     <div className="absolute -right-5 -bottom-5 opacity-20 transform group-hover:rotate-12 transition-transform duration-500"><ShoppingBag size={100} /></div>
                     <div className="bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 backdrop-blur-sm shadow-inner"><Package className="h-6 w-6 text-white" /></div>
-                    <p className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">অর্ডার (আজকে)</p>
-                    <h3 className="text-4xl font-black">{stats.today.count} <span className="text-lg font-medium opacity-80">টি</span></h3>
+                    <p className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">অর্ডার (সিলেক্টেড মাস)</p>
+                    <h3 className="text-4xl font-black">{stats.filtered.totalOrders} <span className="text-lg font-medium opacity-80">টি</span></h3>
                     <div className="flex gap-2 mt-4">
-                        <span className="bg-white/20 px-3 py-1 rounded-lg text-xs font-bold backdrop-blur-sm flex items-center gap-1"><div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div> পেন্ডিং: {stats.today.pending}</span>
+                        <span className="bg-white/20 px-3 py-1 rounded-lg text-xs font-bold backdrop-blur-sm flex items-center gap-1"><div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div> পেন্ডিং: {stats.filtered.pending}</span>
                     </div>
                 </div>
 
                  <div className="bg-gradient-to-br from-emerald-400 to-green-600 p-6 rounded-[2rem] shadow-xl shadow-green-200 text-white relative overflow-hidden group hover:-translate-y-1 transition duration-300">
                     <div className="absolute -right-6 top-10 opacity-20"><Truck size={80} /></div>
                     <div className="bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 backdrop-blur-sm shadow-inner"><CheckSquare className="h-6 w-6 text-white" /></div>
-                    <p className="text-white/90 text-xs font-bold uppercase tracking-wider mb-1">ডেলিভারড (আজকে)</p>
-                    <h3 className="text-3xl font-black">{stats.today.delivered} টি</h3>
+                    <p className="text-white/90 text-xs font-bold uppercase tracking-wider mb-1">ডেলিভারড (সিলেক্টেড মাস)</p>
+                    <h3 className="text-3xl font-black">{stats.filtered.delivered} টি</h3>
                     <div className="mt-4 inline-flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm">
-                        ৳ {stats.today.deliveryAmount.toLocaleString()}
+                        ৳ {stats.filtered.deliveryAmount.toLocaleString()}
                     </div>
                 </div>
 
@@ -636,13 +813,294 @@ const AdminDashboard: React.FC = () => {
                     <div className="absolute -right-6 -top-6 opacity-20"><Ban size={100} /></div>
                     <div className="bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 backdrop-blur-sm shadow-inner"><XCircle className="h-6 w-6 text-white" /></div>
                     <p className="text-white/90 text-xs font-bold uppercase tracking-wider mb-1">ক্যানসেল অর্ডার</p>
-                    <h3 className="text-4xl font-black">{stats.today.canceled} টি</h3>
-                    <p className="text-xs text-white/80 mt-2 font-medium">আজকের বাতিল হওয়া অর্ডার</p>
+                    <h3 className="text-4xl font-black">{stats.filtered.cancelled} টি</h3>
+                    <p className="text-xs text-white/80 mt-2 font-medium">এই মাসে বাতিল হওয়া অর্ডার</p>
                 </div>
+             </div>
+
+             {/* Recent Orders & Top Selling Grid */}
+             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                 
+                 {/* Recent Orders */}
+                 <div className="lg:col-span-2 bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+                     <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                         <h3 className="font-bold text-gray-800 flex items-center gap-2 text-lg"><Activity size={20} className="text-primary"/> রিসেন্ট অর্ডার</h3>
+                         <button onClick={() => setActiveTab('orders')} className="text-xs font-bold text-blue-600 hover:underline">সব দেখুন</button>
+                     </div>
+                     <div className="overflow-x-auto">
+                         <table className="w-full text-left">
+                             <thead className="bg-gray-50 text-[10px] uppercase font-bold text-gray-500">
+                                 <tr>
+                                     <th className="px-6 py-3">অর্ডার আইডি</th>
+                                     <th className="px-6 py-3">কাস্টমার</th>
+                                     <th className="px-6 py-3">টাকার পরিমাণ</th>
+                                     <th className="px-6 py-3">স্ট্যাটাস</th>
+                                 </tr>
+                             </thead>
+                             <tbody className="divide-y divide-gray-50">
+                                 {recentOrders.map((order) => (
+                                     <tr key={order.id} className="hover:bg-gray-50/50 transition cursor-pointer" onClick={() => openEditOrder(order)}>
+                                         <td className="px-6 py-4 font-mono font-bold text-xs text-gray-600">#{order.id}</td>
+                                         <td className="px-6 py-4">
+                                             <p className="text-xs font-bold text-gray-800">{order.customerName}</p>
+                                             <p className="text-[10px] text-gray-400">{order.customerPhone}</p>
+                                         </td>
+                                         <td className="px-6 py-4 font-bold text-xs text-gray-800">৳{order.totalAmount}</td>
+                                         <td className="px-6 py-4">
+                                             <span className={`text-[10px] px-2 py-1 rounded font-bold ${
+                                                 order.status === 'Pending' ? 'bg-orange-100 text-orange-600' :
+                                                 order.status === 'Delivered' ? 'bg-green-100 text-green-600' :
+                                                 'bg-gray-100 text-gray-600'
+                                             }`}>{order.status}</span>
+                                         </td>
+                                     </tr>
+                                 ))}
+                                 {recentOrders.length === 0 && <tr><td colSpan={4} className="text-center py-4 text-xs text-gray-400">কোনো অর্ডার নেই</td></tr>}
+                             </tbody>
+                         </table>
+                     </div>
+                 </div>
+
+                 {/* Top Selling */}
+                 <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-6">
+                     <h3 className="font-bold text-gray-800 mb-6 flex items-center gap-2 text-lg"><TrendingUp size={20} className="text-green-500"/> টপ সেলিং</h3>
+                     <div className="space-y-4">
+                         {topSelling.map((item, idx) => (
+                             <div key={idx} className="flex items-center gap-3 pb-3 border-b border-gray-50 last:border-0 last:pb-0">
+                                 <div className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-100 flex-shrink-0 overflow-hidden">
+                                     <img src={item.image} alt="" className="w-full h-full object-cover" />
+                                 </div>
+                                 <div className="flex-1 min-w-0">
+                                     <h4 className="text-sm font-bold text-gray-800 truncate">{item.name}</h4>
+                                     <p className="text-xs text-gray-400">{item.count} বার বিক্রি হয়েছে</p>
+                                 </div>
+                                 <p className="text-sm font-bold text-primary">৳{item.price}</p>
+                             </div>
+                         ))}
+                         {topSelling.length === 0 && <p className="text-center text-xs text-gray-400">কোনো ডাটা নেই</p>}
+                     </div>
+                 </div>
              </div>
            </div>
         )}
 
+        {/* --- CONTENT MANAGEMENT TAB --- */}
+        {activeTab === 'content' && (
+            <div className="space-y-8 animate-fade-in pb-10">
+                <div className="flex justify-between items-center">
+                    <h2 className="text-3xl font-black text-gray-900 tracking-tight">কনটেন্ট ম্যানেজমেন্ট</h2>
+                    <button onClick={handleSaveContent} disabled={uploading} className="bg-gradient-to-r from-primary to-gray-800 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 shadow-lg hover:scale-105 transition-transform">
+                        {uploading ? <Loader2 className="animate-spin" /> : <Save size={18} />} সেভ করুন
+                    </button>
+                </div>
+
+                {/* Top Bar Settings */}
+                <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-6">
+                    <h3 className="font-black text-gray-800 flex items-center gap-2 text-lg border-b pb-2"><Monitor size={20} className="text-blue-500"/> হোমপেজ টপ বার</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">মেসেজ টেক্সট</label>
+                            <input 
+                                type="text" 
+                                value={siteContent.topBar.message} 
+                                onChange={e => setSiteContent({...siteContent, topBar: {...siteContent.topBar, message: e.target.value}})}
+                                className="w-full border-gray-200 rounded-xl p-3 bg-white focus:bg-white focus:ring-2 focus:ring-primary/10 transition font-bold text-gray-800 text-sm" 
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">হাইলাইট কোড/টেক্সট</label>
+                            <input 
+                                type="text" 
+                                value={siteContent.topBar.code} 
+                                onChange={e => setSiteContent({...siteContent, topBar: {...siteContent.topBar, code: e.target.value}})}
+                                className="w-full border-gray-200 rounded-xl p-3 bg-white focus:bg-white focus:ring-2 focus:ring-primary/10 transition font-bold text-yellow-600 text-sm" 
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Middle Banner Settings */}
+                <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-6">
+                    <h3 className="font-black text-gray-800 flex items-center gap-2 text-lg border-b pb-2"><CreditCard size={20} className="text-purple-500"/> মিডল ব্যানার</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="col-span-1 md:col-span-2 space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">ব্যানার ইমেজ URL</label>
+                            <input 
+                                type="text" 
+                                value={siteContent.middleBanner?.image || ''} 
+                                onChange={e => setSiteContent({...siteContent, middleBanner: {...siteContent.middleBanner, image: e.target.value}})}
+                                className="w-full border-gray-200 rounded-xl p-3 bg-white focus:bg-white focus:ring-2 focus:ring-primary/10 transition font-bold text-gray-800 text-sm" 
+                                placeholder="https://..."
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">টাইটেল</label>
+                            <input 
+                                type="text" 
+                                value={siteContent.middleBanner?.title || ''} 
+                                onChange={e => setSiteContent({...siteContent, middleBanner: {...siteContent.middleBanner, title: e.target.value}})}
+                                className="w-full border-gray-200 rounded-xl p-3 bg-white focus:bg-white focus:ring-2 focus:ring-primary/10 transition font-bold text-gray-800 text-sm" 
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">ব্যানার ব্যাজ (Badge)</label>
+                            <input 
+                                type="text" 
+                                value={siteContent.middleBanner?.badge || ''} 
+                                onChange={e => setSiteContent({...siteContent, middleBanner: {...siteContent.middleBanner, badge: e.target.value}})}
+                                className="w-full border-gray-200 rounded-xl p-3 bg-white focus:bg-white focus:ring-2 focus:ring-primary/10 transition font-bold text-yellow-600 text-sm" 
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">বিবরণ</label>
+                            <textarea 
+                                rows={2}
+                                value={siteContent.middleBanner?.description || ''} 
+                                onChange={e => setSiteContent({...siteContent, middleBanner: {...siteContent.middleBanner, description: e.target.value}})}
+                                className="w-full border-gray-200 rounded-xl p-3 bg-white focus:bg-white focus:ring-2 focus:ring-primary/10 transition font-bold text-gray-800 text-sm" 
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">বাটন টেক্সট</label>
+                            <input 
+                                type="text" 
+                                value={siteContent.middleBanner?.btnText || ''} 
+                                onChange={e => setSiteContent({...siteContent, middleBanner: {...siteContent.middleBanner, btnText: e.target.value}})}
+                                className="w-full border-gray-200 rounded-xl p-3 bg-white focus:bg-white focus:ring-2 focus:ring-primary/10 transition font-bold text-gray-800 text-sm" 
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Flash Sale Settings */}
+                <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-6">
+                    <h3 className="font-black text-gray-800 flex items-center gap-2 text-lg border-b pb-2"><Clock size={20} className="text-orange-500"/> ফ্ল্যাশ সেল টাইমার</h3>
+                    <div className="space-y-2 max-w-md">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">শেষ হওয়ার সময়</label>
+                        <input 
+                            type="datetime-local" 
+                            value={siteContent.flashSale.endTime} 
+                            onChange={e => setSiteContent({...siteContent, flashSale: { endTime: e.target.value }})}
+                            className="w-full border-gray-200 rounded-xl p-3 bg-white focus:bg-white focus:ring-2 focus:ring-primary/10 transition font-bold text-gray-800" 
+                        />
+                    </div>
+                </div>
+
+                {/* Hero Slides Settings */}
+                <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-6">
+                    <div className="flex justify-between items-center border-b pb-2">
+                        <h3 className="font-black text-gray-800 flex items-center gap-2 text-lg"><Layers size={20} className="text-purple-500"/> হিরো সেকশন স্লাইডার</h3>
+                        <button 
+                            onClick={() => setSiteContent({
+                                ...siteContent, 
+                                heroSlides: [...siteContent.heroSlides, { 
+                                    id: Date.now(), 
+                                    bgImage: '', 
+                                    title: 'New Slide', 
+                                    highlight: 'Offer', 
+                                    description: '', 
+                                    btnText: 'Shop Now', 
+                                    btnColor: 'bg-white text-gray-800' 
+                                }]
+                            })}
+                            className="text-sm font-bold text-primary flex items-center gap-1 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition"
+                        >
+                            <Plus size={16}/> নতুন স্লাইড
+                        </button>
+                    </div>
+                    
+                    <div className="space-y-6">
+                        {siteContent.heroSlides.map((slide, index) => (
+                            <div key={slide.id} className="bg-gray-50 p-6 rounded-2xl border border-gray-200 relative group">
+                                <button 
+                                    onClick={() => {
+                                        const newSlides = siteContent.heroSlides.filter((_, i) => i !== index);
+                                        setSiteContent({...siteContent, heroSlides: newSlides});
+                                    }}
+                                    className="absolute top-4 right-4 text-red-400 hover:text-red-600 bg-white p-2 rounded-full shadow-sm"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div className="col-span-1 md:col-span-2 lg:col-span-3 space-y-2">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">ব্যাকগ্রাউন্ড ইমেজ URL</label>
+                                        <div className="flex gap-2">
+                                            <div className="p-3 bg-white border border-gray-200 rounded-xl text-gray-400"><ImageIcon size={18} /></div>
+                                            <input 
+                                                type="text" 
+                                                value={slide.bgImage} 
+                                                onChange={e => {
+                                                    const newSlides = [...siteContent.heroSlides];
+                                                    newSlides[index].bgImage = e.target.value;
+                                                    setSiteContent({...siteContent, heroSlides: newSlides});
+                                                }}
+                                                className="w-full border-gray-200 rounded-xl p-2 text-sm focus:outline-none focus:border-primary bg-white"
+                                                placeholder="https://..."
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">টাইটেল</label>
+                                        <input 
+                                            type="text" 
+                                            value={slide.title} 
+                                            onChange={e => {
+                                                const newSlides = [...siteContent.heroSlides];
+                                                newSlides[index].title = e.target.value;
+                                                setSiteContent({...siteContent, heroSlides: newSlides});
+                                            }}
+                                            className="w-full border-gray-200 rounded-xl p-2 text-sm focus:outline-none focus:border-primary font-bold bg-white"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">হাইলাইট টেক্সট</label>
+                                        <input 
+                                            type="text" 
+                                            value={slide.highlight} 
+                                            onChange={e => {
+                                                const newSlides = [...siteContent.heroSlides];
+                                                newSlides[index].highlight = e.target.value;
+                                                setSiteContent({...siteContent, heroSlides: newSlides});
+                                            }}
+                                            className="w-full border-gray-200 rounded-xl p-2 text-sm focus:outline-none focus:border-primary font-bold text-yellow-600 bg-white"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">বাটন টেক্সট</label>
+                                        <input 
+                                            type="text" 
+                                            value={slide.btnText} 
+                                            onChange={e => {
+                                                const newSlides = [...siteContent.heroSlides];
+                                                newSlides[index].btnText = e.target.value;
+                                                setSiteContent({...siteContent, heroSlides: newSlides});
+                                            }}
+                                            className="w-full border-gray-200 rounded-xl p-2 text-sm focus:outline-none focus:border-primary bg-white"
+                                        />
+                                    </div>
+                                    <div className="col-span-1 md:col-span-2 space-y-2">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">বিবরণ</label>
+                                        <textarea 
+                                            rows={2}
+                                            value={slide.description} 
+                                            onChange={e => {
+                                                const newSlides = [...siteContent.heroSlides];
+                                                newSlides[index].description = e.target.value;
+                                                setSiteContent({...siteContent, heroSlides: newSlides});
+                                            }}
+                                            className="w-full border-gray-200 rounded-xl p-2 text-sm focus:outline-none focus:border-primary bg-white"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* ... Rest of tabs ... */}
         {/* --- PRODUCTS TAB --- */}
         {activeTab === 'products' && (
           <div className="animate-fade-in space-y-6">
@@ -907,25 +1365,26 @@ const AdminDashboard: React.FC = () => {
              <div className="space-y-6 animate-fade-in">
                 {/* ... (Summary Cards) ... */}
                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center items-center">
-                        <p className="text-xs font-bold text-gray-400 uppercase">আজকের অর্ডার</p>
-                        <h3 className="text-2xl font-black text-gray-800">{stats.today.count}</h3>
-                        <p className="text-xs font-bold text-primary">৳ {stats.today.sales.toLocaleString()}</p>
+                    <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-4 rounded-2xl shadow-lg border border-indigo-100 flex flex-col justify-center items-center text-white">
+                        <p className="text-xs font-bold text-indigo-100 uppercase">আজকের অর্ডার</p>
+                        <h3 className="text-2xl font-black">{stats.today.count}</h3>
+                        <p className="text-xs font-bold text-indigo-200">৳ {stats.today.sales.toLocaleString()}</p>
                     </div>
                     {/* ... other stats ... */}
-                    <div className="bg-orange-50 p-4 rounded-2xl shadow-sm border border-orange-100 flex flex-col justify-center items-center">
-                        <p className="text-xs font-bold text-orange-400 uppercase">পেন্ডিং</p>
-                        <h3 className="text-2xl font-black text-orange-600">{stats.today.pending}</h3>
-                        <p className="text-xs font-bold text-orange-500">৳ {stats.today.pendingAmount.toLocaleString()}</p>
+                    <div className="bg-gradient-to-br from-orange-400 to-amber-600 p-4 rounded-2xl shadow-lg border border-orange-100 flex flex-col justify-center items-center text-white">
+                        <p className="text-xs font-bold text-orange-100 uppercase">পেন্ডিং</p>
+                        <h3 className="text-2xl font-black">{stats.filtered.pending}</h3>
+                        <p className="text-xs font-bold text-orange-200">চলতি মাস</p>
                     </div>
-                    <div className="bg-green-50 p-4 rounded-2xl shadow-sm border border-green-100 flex flex-col justify-center items-center">
-                        <p className="text-xs font-bold text-green-400 uppercase">ডেলিভারড</p>
-                        <h3 className="text-2xl font-black text-green-600">{stats.today.delivered}</h3>
-                        <p className="text-xs font-bold text-green-500">৳ {stats.today.deliveryAmount.toLocaleString()}</p>
+                    <div className="bg-gradient-to-br from-emerald-400 to-green-600 p-4 rounded-2xl shadow-lg border border-green-100 flex flex-col justify-center items-center text-white">
+                        <p className="text-xs font-bold text-green-100 uppercase">ডেলিভারড</p>
+                        <h3 className="text-2xl font-black">{stats.filtered.delivered}</h3>
+                        <p className="text-xs font-bold text-green-200">চলতি মাস</p>
                     </div>
-                    <div className="bg-red-50 p-4 rounded-2xl shadow-sm border border-red-100 flex flex-col justify-center items-center">
-                        <p className="text-xs font-bold text-red-400 uppercase">ক্যানসেলড</p>
-                        <h3 className="text-2xl font-black text-red-600">{stats.today.canceled}</h3>
+                    <div className="bg-gradient-to-br from-rose-500 to-red-600 p-4 rounded-2xl shadow-lg border border-red-100 flex flex-col justify-center items-center text-white">
+                        <p className="text-xs font-bold text-rose-100 uppercase">ক্যানসেলড</p>
+                        <h3 className="text-2xl font-black">{stats.filtered.cancelled}</h3>
+                        <p className="text-xs font-bold text-rose-200">চলতি মাস</p>
                     </div>
                 </div>
 
@@ -954,53 +1413,59 @@ const AdminDashboard: React.FC = () => {
 
                 {/* Colorful Order Cards */}
                 <div className="space-y-4">
-                    {filteredOrders.map(order => (
-                        <div key={order.id} className={`rounded-[24px] shadow-sm border hover:shadow-md transition-all duration-300 cursor-pointer overflow-hidden group relative
-                             ${order.status === 'Pending' ? 'bg-orange-50 border-orange-100' : 
-                               order.status === 'Delivered' ? 'bg-green-50 border-green-100' :
-                               order.status === 'Cancelled' ? 'bg-red-50 border-red-100' :
-                               'bg-white border-gray-100'}
-                        `} onClick={() => openEditOrder(order)}>
-                            
-                            <div className="pl-6 pr-5 py-5 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-                                {/* Order ID & Date */}
-                                <div className="min-w-[120px]">
-                                    <p className="text-[10px] font-black uppercase tracking-wider text-gray-400">Order ID</p>
-                                    <h3 className="text-lg font-black text-gray-800 font-mono">#{order.id}</h3>
-                                    <p className="text-[10px] font-bold text-gray-400 mt-1">{order.createdAt?.toDate().toLocaleDateString()}</p>
+                    {filteredOrders.map(order => {
+                        const style = getOrderStyles(order.status);
+                        return (
+                            <div key={order.id} className={`rounded-[24px] shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden group relative border ${style.bg} ${style.border}`} onClick={() => openEditOrder(order)}>
+                                
+                                {/* Background Decorative Icon */}
+                                <div className={`absolute -right-6 -top-6 opacity-10 transform rotate-12 group-hover:scale-110 transition-transform duration-500`}>
+                                    <style.icon size={120} className={style.iconColor} />
                                 </div>
 
-                                {/* Customer */}
-                                <div className="flex items-center gap-3 md:flex-1">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-white shadow-sm`}>
-                                        {order.customerName.charAt(0)}
+                                <div className="pl-6 pr-5 py-5 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between relative z-10">
+                                    {/* Order ID & Date */}
+                                    <div className="min-w-[120px]">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className={`text-[10px] font-black uppercase tracking-wider opacity-70 ${style.text}`}>Order ID</span>
+                                        </div>
+                                        <h3 className={`text-xl font-black font-mono tracking-tight ${style.text}`}>#{order.id}</h3>
+                                        <p className={`text-[10px] font-bold mt-1 opacity-60 ${style.text}`}>{order.createdAt?.toDate().toLocaleDateString()}</p>
                                     </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-gray-900">{order.customerName}</p>
-                                        <p className="text-[11px] text-gray-500 font-medium">{order.customerPhone}</p>
+
+                                    {/* Customer */}
+                                    <div className="flex items-center gap-3 md:flex-1">
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg shadow-sm bg-white/40 backdrop-blur-sm ${style.text}`}>
+                                            {order.customerName.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <p className={`text-sm font-bold ${style.text}`}>{order.customerName}</p>
+                                            <p className={`text-[11px] font-medium opacity-70 ${style.text}`}>{order.customerPhone}</p>
+                                        </div>
                                     </div>
-                                </div>
 
-                                {/* Amount */}
-                                <div className="bg-white/60 backdrop-blur-sm px-4 py-2 rounded-xl text-center min-w-[100px]">
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase">Amount</p>
-                                    <p className="text-base font-black text-gray-800">৳{order.totalAmount}</p>
-                                </div>
+                                    {/* Amount */}
+                                    <div className="bg-white/40 backdrop-blur-md px-5 py-2.5 rounded-xl text-center min-w-[120px] shadow-sm border border-white/20">
+                                        <p className={`text-[10px] font-bold uppercase opacity-60 ${style.text}`}>Amount</p>
+                                        <p className={`text-lg font-black ${style.text}`}>৳{order.totalAmount}</p>
+                                    </div>
 
-                                {/* Status Badge */}
-                                <div className="min-w-[100px] text-center">
-                                    <span className={`text-[10px] px-3 py-1.5 rounded-full font-bold uppercase tracking-wide shadow-sm inline-block bg-white`}>
-                                        {order.status}
-                                    </span>
-                                </div>
+                                    {/* Status Badge */}
+                                    <div className="min-w-[130px] text-center">
+                                        <span className={`text-[10px] px-4 py-2 rounded-full font-bold uppercase tracking-wide shadow-lg inline-flex items-center gap-1.5 ${style.badge}`}>
+                                            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
+                                            {order.status}
+                                        </span>
+                                    </div>
 
-                                {/* Arrow */}
-                                <div className="hidden md:block text-gray-300 group-hover:text-primary transition group-hover:translate-x-1">
-                                    <ChevronRight />
+                                    {/* Arrow */}
+                                    <div className={`hidden md:block group-hover:translate-x-2 transition-transform duration-300 ${style.text}`}>
+                                        <ChevronRight />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                     {filteredOrders.length === 0 && (
                         <div className="flex flex-col items-center justify-center py-20 text-gray-400 bg-white rounded-3xl border border-gray-100 border-dashed">
                             <ShoppingBag size={48} className="mb-4 opacity-20" />
@@ -1090,6 +1555,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
             </div>
         )}
+        </div>
       </main>
 
       {/* --- MOBILE BOTTOM NAV --- */}

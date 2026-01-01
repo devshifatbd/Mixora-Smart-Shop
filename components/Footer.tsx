@@ -1,10 +1,10 @@
 import React from 'react';
-import { MapPin, Phone, Mail, Facebook, Instagram, Youtube, Heart } from 'lucide-react';
+import { MapPin, Phone, Mail, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-[#0F172A] text-white pt-20 mt-0 font-sans border-t-4 border-transparent relative overflow-hidden">
+    <footer className="hidden md:block bg-[#0F172A] text-white pt-20 mt-0 font-sans border-t-4 border-transparent relative overflow-hidden">
       {/* Colorful Gradient Border Top */}
       <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500"></div>
 
@@ -29,11 +29,6 @@ const Footer: React.FC = () => {
             <p className="text-sm leading-relaxed text-gray-300 font-medium">
               মিক্সোরা স্মার্ট শপ - আপনার লাইফস্টাইলের বিশ্বস্ত সঙ্গী। আমরা দিচ্ছি প্রিমিয়াম কোয়ালিটির নিশ্চয়তা এবং দ্রুততম ডেলিভারি সার্ভিস।
             </p>
-            <div className="flex gap-4">
-                <a href="#" className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center hover:-translate-y-1 transition shadow-lg shadow-blue-500/30"><Facebook size={18} fill="white" /></a>
-                <a href="#" className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center hover:-translate-y-1 transition shadow-lg shadow-pink-500/30"><Instagram size={18} /></a>
-                <a href="#" className="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center hover:-translate-y-1 transition shadow-lg shadow-red-500/30"><Youtube size={18} fill="white" /></a>
-            </div>
           </div>
 
           {/* Quick Links */}
@@ -70,7 +65,7 @@ const Footer: React.FC = () => {
              <ul className="space-y-5 text-sm font-medium text-gray-300">
                 <li className="flex items-start gap-3 group">
                    <div className="bg-pink-500/20 p-2 rounded-lg text-pink-500 group-hover:bg-pink-500 group-hover:text-white transition"><MapPin size={18} /></div>
-                   <span>উত্তরা সেক্টর ৭, ঢাকা - ১২৩০,<br/>বাংলাদেশ</span>
+                   <span>Dhaka, Bangladesh</span>
                 </li>
                 <li className="flex items-center gap-3 group">
                    <div className="bg-green-500/20 p-2 rounded-lg text-green-500 group-hover:bg-green-500 group-hover:text-white transition"><Phone size={18} /></div>

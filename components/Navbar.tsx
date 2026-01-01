@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Menu, X, Search, User, Phone, LayoutDashboard, Truck } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { categoriesList } from '../data';
 import { Product } from '../types';
+import { db } from '../firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 interface NavbarProps {
   cartCount: number;
@@ -16,9 +18,22 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenLogin, onOpenTracking, onOpenCart }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [topBarContent, setTopBarContent] = useState({
+      message: '🎉 মিক্সোরা সুপার শপ - এ প্রথম অর্ডারে ডেলিভারি চার্জ ফ্রি! কোড:', 
+      code: 'NEW24'
+  });
   
   const { isAdmin, currentUser, logout } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+      const unsub = onSnapshot(doc(db, "siteContent", "topBar"), (doc) => {
+          if (doc.exists()) {
+              setTopBarContent(doc.data() as any);
+          }
+      });
+      return () => unsub();
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,19 +45,29 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenLogin, onOpenTracking,
 
   return (
     <>
-      {/* Fixed Header Container */}
+      {/* Navbar Container */}
       <header className="w-full bg-white shadow-sm sticky top-0 z-50 font-sans transition-all duration-300 backdrop-blur-md bg-white/90 supports-[backdrop-filter]:bg-white/60">
         
-        {/* Top Notification Bar */}
-        <div className="bg-gradient-to-r from-primary via-purple-900 to-primary text-white text-[10px] md:text-xs py-1.5 text-center font-bold tracking-wide">
-          <p>🎉 মিক্সোরা সুপার শপ - এ প্রথম অর্ডারে ডেলিভারি চার্জ ফ্রি! কোড: <span className="text-yellow-300 font-black">NEW24</span></p>
+        {/* Top Notification Bar - HIDDEN ON MOBILE */}
+        <div className="hidden md:block bg-gradient-to-r from-primary via-purple-900 to-primary text-white text-[10px] md:text-xs py-1.5 text-center font-bold tracking-wide">
+          <p>{topBarContent.message} <span className="text-yellow-300 font-black">{topBarContent.code}</span></p>
         </div>
 
         {/* Main Navbar */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex items-center justify-between gap-4">
             
-            {/* 1. Logo & Branding */}
+            {/* Mobile Menu Toggle (Left) */}
+            <div className="md:hidden">
+                <button
+                  onClick={() => setIsOpen(!isOpen)}
+                  className="p-2 text-gray-700 bg-gray-50 rounded-xl hover:bg-gray-100 border border-gray-200 transition-colors shadow-sm"
+                >
+                  {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </button>
+            </div>
+
+            {/* Logo */}
             <Link to="/" className="flex items-center gap-2 flex-shrink-0 group">
               <img 
                 src="https://iili.io/fhzYEP4.png" 
@@ -51,7 +76,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenLogin, onOpenTracking,
               />
             </Link>
 
-            {/* 2. Search Bar (Desktop) */}
+            {/* Search Bar (Desktop) */}
             <div className="hidden md:flex flex-1 max-w-[400px] relative mx-auto">
               <form onSubmit={handleSearch} className="w-full relative group">
                  <input 
@@ -67,7 +92,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenLogin, onOpenTracking,
               </form>
             </div>
 
-            {/* 3. Actions Icons */}
+            {/* Actions Icons */}
             <div className="flex items-center gap-3 md:gap-6">
               
               {/* Order Tracking (Desktop) */}
@@ -87,7 +112,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenLogin, onOpenTracking,
 
               {/* Cart Button (Opens Modal) */}
               <button onClick={onOpenCart} className="relative cursor-pointer group">
-                 <div className="p-2.5 bg-gray-50 rounded-full group-hover:bg-secondary group-hover:text-white transition-colors border border-gray-100">
+                 <div className="p-2.5 bg-gray-50 rounded-full group-hover:bg-secondary group-hover:text-white transition-colors border border-gray-100 shadow-sm">
                     <ShoppingCart className="h-5 w-5" />
                  </div>
                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] h-5 w-5 flex items-center justify-center rounded-full font-bold border-2 border-white shadow-sm animate-pulse-slow">
@@ -95,7 +120,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenLogin, onOpenTracking,
                  </span>
               </button>
 
-              {/* User/Menu */}
+              {/* User/Menu (Desktop) */}
               <div className="hidden md:block">
                   {currentUser ? (
                      <Link to={isAdmin ? "/admin/dashboard" : "/"} className="flex items-center gap-2 cursor-pointer hover:text-primary transition">
@@ -109,30 +134,22 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenLogin, onOpenTracking,
                      </button>
                   )}
               </div>
-
-              {/* Mobile Menu Toggle */}
-              <button
-                  onClick={() => setIsOpen(!isOpen)}
-                  className="md:hidden p-2 text-gray-800 focus:outline-none bg-gray-50 rounded-lg hover:bg-gray-100 border border-gray-100"
-                >
-                  {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-              </button>
             </div>
           </div>
 
-          {/* Mobile Search Bar */}
+          {/* Mobile Search Bar - App-like styling */}
           <div className="md:hidden mt-3 pb-1">
              <form onSubmit={handleSearch} className="relative">
                 <input 
                   type="text" 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="কি লাগবে আপনার?..." 
-                  className="w-full pl-4 pr-10 py-3 bg-gray-100 rounded-xl text-xs font-bold text-gray-700 outline-none focus:ring-1 focus:ring-secondary/50"
+                  placeholder="পণ্য খুঁজুন..." 
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-800 outline-none focus:bg-white focus:border-primary/30 focus:ring-2 focus:ring-primary/10 transition-all shadow-sm"
                 />
-                <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 bg-white p-1.5 rounded-lg shadow-sm flex items-center justify-center">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                    <Search className="h-4 w-4" />
-                </button>
+                </div>
              </form>
           </div>
         </div>

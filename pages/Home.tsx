@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ProductCard from '../components/ProductCard';
 import { Product } from '../types';
 import { db } from '../firebase';
-import { collection, getDocs, limit, query } from 'firebase/firestore';
+import { collection, getDocs, limit, query, doc, getDoc } from 'firebase/firestore';
 import { 
   Loader2, ChevronRight, Sparkles, Tag, Truck, ShieldCheck, 
   CreditCard, LayoutDashboard, MessageCircle, Send, Timer, ShoppingBag, Zap, ArrowRight
@@ -38,7 +38,7 @@ const categoryIconsFallback: Record<string, any> = {
   'গিফট ও স্টেশনারি': Tag,
 };
 
-const slides = [
+const defaultSlides = [
   { 
     id: 1, 
     bgImage: "https://i.pinimg.com/736x/2b/fe/52/2bfe5239a045e652557d8bb742fc28e2.jpg", 
@@ -72,8 +72,19 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [timeLeft, setTimeLeft] = useState({ hours: 5, minutes: 12, seconds: 30 });
+  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const navigate = useNavigate();
+
+  // Content States
+  const [slides, setSlides] = useState(defaultSlides);
+  const [flashSaleEndTime, setFlashSaleEndTime] = useState<Date | null>(null);
+  const [middleBanner, setMiddleBanner] = useState({
+      image: "https://i.pinimg.com/1200x/ee/06/b5/ee06b50d83e0da8b9f57eae955246ccd.jpg",
+      title: "YEAR END SALE",
+      badge: "Limited Time Offer",
+      description: "আমাদের সব প্রিমিয়াম কালেকশনে পাচ্ছেন বিশেষ ছাড়। স্টক শেষ হওয়ার আগেই অর্ডার করুন।",
+      btnText: "অফারগুলো দেখুন"
+  });
 
   // Handle Image Error for Categories
   const [imgError, setImgError] = useState<Record<string, boolean>>({});
@@ -85,12 +96,35 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Fetch Products
         const productSnapshot = await getDocs(query(collection(db, "products"), limit(20)));
         const productList = productSnapshot.docs.map(doc => ({
            id: doc.id,
            ...doc.data()
         } as Product));
         setProducts(productList);
+
+        // Fetch Hero Slides
+        const heroDoc = await getDoc(doc(db, "siteContent", "hero"));
+        if (heroDoc.exists() && heroDoc.data().slides) {
+            setSlides(heroDoc.data().slides);
+        }
+
+        // Fetch Middle Banner
+        const middleBannerDoc = await getDoc(doc(db, "siteContent", "middleBanner"));
+        if (middleBannerDoc.exists()) {
+            setMiddleBanner(middleBannerDoc.data() as any);
+        }
+
+        // Fetch Flash Sale
+        const fsDoc = await getDoc(doc(db, "siteContent", "flashSale"));
+        if (fsDoc.exists() && fsDoc.data().endTime) {
+            setFlashSaleEndTime(new Date(fsDoc.data().endTime));
+        } else {
+            // Default 5 hours if not set
+            setFlashSaleEndTime(new Date(Date.now() + 5 * 60 * 60 * 1000));
+        }
+
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -105,20 +139,27 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, []);
+  }, [slides.length]);
 
   // Flash Sale Timer Logic
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
-        if (prev.minutes > 0) return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        if (prev.hours > 0) return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        return { hours: 0, minutes: 0, seconds: 0 }; // Ended
-      });
+        if (!flashSaleEndTime) return;
+        
+        const now = new Date();
+        const diff = flashSaleEndTime.getTime() - now.getTime();
+
+        if (diff <= 0) {
+            setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
+        } else {
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            setTimeLeft({ hours, minutes, seconds });
+        }
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [flashSaleEndTime]);
 
   const handleDirectOrder = (product: Product) => {
     addToCart(product);
@@ -158,7 +199,7 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
                                  </p>
                                  <button 
                                     onClick={() => navigate('/category/all')}
-                                    className={`${slide.btnColor} px-8 py-3.5 rounded-full font-bold shadow-[0_10px_20px_rgba(0,0,0,0.2)] hover:shadow-[0_15px_30px_rgba(0,0,0,0.3)] hover:-translate-y-1 transition-all duration-300 flex items-center gap-2 text-sm uppercase tracking-wider`}
+                                    className={`${slide.btnColor || "bg-white text-blue-600"} px-8 py-3.5 rounded-full font-bold shadow-[0_10px_20px_rgba(0,0,0,0.2)] hover:shadow-[0_15px_30px_rgba(0,0,0,0.3)] hover:-translate-y-1 transition-all duration-300 flex items-center gap-2 text-sm uppercase tracking-wider`}
                                  >
                                     {slide.btnText} <ChevronRight size={18} />
                                  </button>
@@ -236,20 +277,20 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
       </div>
 
       {/* 3. MIDDLE BANNER */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 hidden md:block">
           <div className="relative rounded-[2rem] overflow-hidden h-[160px] md:h-[260px] shadow-lg group cursor-pointer">
              <img 
-               src="https://i.pinimg.com/1200x/ee/06/b5/ee06b50d83e0da8b9f57eae955246ccd.jpg" 
+               src={middleBanner.image} 
                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
                alt="Sale Banner" 
              />
              <div className="absolute inset-0 bg-gradient-to-r from-purple-900/90 via-purple-900/50 to-transparent flex items-center px-8 md:px-20">
                  <div className="text-white transform group-hover:translate-x-2 transition-transform duration-500">
-                     <div className="bg-yellow-400 text-purple-900 inline-block px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest mb-3 shadow-md">Limited Time Offer</div>
-                     <h2 className="text-3xl md:text-6xl font-black mb-3 italic tracking-tight">YEAR END <span className="text-transparent bg-clip-text bg-gradient-to-br from-yellow-300 to-orange-500">SALE</span></h2>
-                     <p className="text-sm md:text-lg text-gray-200 mb-6 font-medium max-w-md">আমাদের সব প্রিমিয়াম কালেকশনে পাচ্ছেন বিশেষ ছাড়। স্টক শেষ হওয়ার আগেই অর্ডার করুন।</p>
+                     <div className="bg-yellow-400 text-purple-900 inline-block px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest mb-3 shadow-md">{middleBanner.badge}</div>
+                     <h2 className="text-3xl md:text-6xl font-black mb-3 italic tracking-tight">{middleBanner.title}</h2>
+                     <p className="text-sm md:text-lg text-gray-200 mb-6 font-medium max-w-md">{middleBanner.description}</p>
                      <button onClick={() => navigate('/category/all')} className="bg-white text-purple-900 px-8 py-3 rounded-full font-bold text-sm hover:bg-yellow-400 transition-colors shadow-lg shadow-purple-900/20">
-                         অফারগুলো দেখুন
+                         {middleBanner.btnText}
                      </button>
                  </div>
              </div>
