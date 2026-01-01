@@ -8,7 +8,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../firebase';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, UserCircle2, X, Mail, Lock, LogIn } from 'lucide-react';
+import { AlertCircle, X, Mail, Lock, ArrowRight, Fingerprint } from 'lucide-react';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -71,94 +71,100 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+      {/* Dynamic Backdrop */}
+      <div 
+        className="absolute inset-0 bg-gray-900/60 backdrop-blur-md transition-opacity duration-300" 
+        onClick={onClose}
+      ></div>
 
-      {/* Modal Content */}
-      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md relative overflow-hidden animate-fade-in-up transform transition-all">
+      {/* Unique Compact Card */}
+      <div className="relative w-full max-w-[360px] bg-white rounded-[32px] shadow-2xl overflow-hidden animate-fade-in-up transform transition-all duration-500 scale-100 ring-4 ring-white/20">
          
-         {/* Decoration Header */}
-         <div className="h-32 bg-gradient-to-br from-primary via-gray-900 to-black relative">
-            <button onClick={onClose} className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 text-white p-2 rounded-full transition backdrop-blur-sm">
-                <X size={20} />
-            </button>
-            <div className="absolute -bottom-10 left-1/2 -translate-x-1/2">
-                <div className="bg-white p-3 rounded-full shadow-lg">
-                    <div className="bg-primary/10 p-3 rounded-full">
-                        <UserCircle2 className="h-12 w-12 text-primary" />
-                    </div>
-                </div>
+         {/* Close Button */}
+         <button 
+            onClick={onClose} 
+            className="absolute top-4 right-4 z-20 bg-gray-100 hover:bg-gray-200 text-gray-500 p-2 rounded-full transition-colors"
+         >
+            <X size={18} />
+         </button>
+
+         {/* Header Design */}
+         <div className="px-8 pt-10 pb-6 text-center">
+            <div className="w-16 h-16 bg-gradient-to-tr from-primary to-gray-800 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-gray-300 transform rotate-3 mb-4 group hover:rotate-6 transition-transform duration-300">
+                 <Fingerprint className="text-white w-8 h-8" />
             </div>
+            <h2 className="text-2xl font-black text-gray-900 tracking-tight">হ্যালো!</h2>
+            <p className="text-xs font-bold text-gray-400 mt-1 uppercase tracking-wider">একাউন্টে প্রবেশ করুন</p>
          </div>
 
-         <div className="pt-12 pb-8 px-8">
-            <div className="text-center mb-6">
-                <h2 className="text-2xl font-black text-gray-800">স্বাগতম!</h2>
-                <p className="text-sm text-gray-500 font-medium">অ্যাকাউন্টে প্রবেশ করতে লগইন করুন</p>
-            </div>
-
+         {/* Form Section */}
+         <div className="px-8 pb-8">
             {error && (
-                <div className="bg-red-50 border border-red-100 text-red-600 p-3 rounded-xl mb-5 text-sm flex items-center gap-2 animate-pulse">
-                    <AlertCircle size={16} /> <span>{error}</span>
+                <div className="bg-red-50 text-red-600 text-[10px] font-bold p-3 rounded-xl mb-4 flex items-center gap-2 border border-red-100 animate-pulse">
+                    <AlertCircle size={14} /> <span>{error}</span>
                 </div>
             )}
 
-            <form onSubmit={handleLogin} className="space-y-4">
-                <div className="relative group">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors h-5 w-5" />
+            <form onSubmit={handleLogin} className="space-y-3">
+                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-1 flex items-center transition-colors focus-within:bg-white focus-within:border-primary/30 focus-within:shadow-sm">
+                    <div className="p-3 bg-white rounded-xl text-gray-400 shadow-sm">
+                        <Mail size={16} />
+                    </div>
                     <input 
                         type="email" 
                         required 
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="আপনার ইমেইল"
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3.5 pl-12 pr-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 font-bold text-gray-700 transition-all"
+                        className="w-full bg-transparent border-none outline-none text-sm font-bold text-gray-700 px-3 placeholder:font-normal placeholder:text-gray-400"
                     />
                 </div>
-                <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors h-5 w-5" />
+                
+                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-1 flex items-center transition-colors focus-within:bg-white focus-within:border-primary/30 focus-within:shadow-sm">
+                    <div className="p-3 bg-white rounded-xl text-gray-400 shadow-sm">
+                        <Lock size={16} />
+                    </div>
                     <input 
                         type="password" 
                         required 
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="পাসওয়ার্ড"
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3.5 pl-12 pr-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 font-bold text-gray-700 transition-all"
+                        className="w-full bg-transparent border-none outline-none text-sm font-bold text-gray-700 px-3 placeholder:font-normal placeholder:text-gray-400"
                     />
                 </div>
 
-                <div className="flex justify-end">
-                    <a href="#" className="text-xs font-bold text-primary hover:underline">পাসওয়ার্ড ভুলে গেছেন?</a>
+                <div className="text-right">
+                    <a href="#" className="text-[10px] font-bold text-gray-400 hover:text-primary transition-colors">পাসওয়ার্ড ভুলে গেছেন?</a>
                 </div>
 
                 <button 
                     type="submit" 
                     disabled={loading}
-                    className="w-full bg-primary text-white py-3.5 rounded-xl font-bold shadow-lg shadow-primary/30 hover:bg-gray-800 hover:shadow-xl hover:-translate-y-0.5 transition-all flex justify-center items-center gap-2"
+                    className="w-full bg-gray-900 text-white py-3.5 rounded-2xl font-bold text-sm shadow-xl shadow-gray-300 hover:bg-black hover:scale-[1.02] transition-all flex justify-center items-center gap-2 group"
                 >
-                    {loading ? 'অপেক্ষা করুন...' : <><LogIn size={18} /> লগইন করুন</>}
+                    {loading ? 'অপেক্ষা করুন...' : <>লগইন <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" /></>}
                 </button>
             </form>
 
-            <div className="flex items-center gap-4 my-6">
-                <div className="h-px bg-gray-200 flex-1"></div>
-                <span className="text-xs font-bold text-gray-400 uppercase">অথবা</span>
-                <div className="h-px bg-gray-200 flex-1"></div>
+            <div className="relative py-5">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-gray-100"></span></div>
+                <div className="relative flex justify-center text-[10px] uppercase font-bold text-gray-300">
+                    <span className="bg-white px-2">Or continue with</span>
+                </div>
             </div>
 
             <button 
                 onClick={handleGoogleLogin}
                 disabled={loading}
-                className="w-full bg-white border border-gray-200 text-gray-700 py-3.5 rounded-xl font-bold hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center justify-center gap-3 shadow-sm"
+                className="w-full bg-white border-2 border-gray-100 text-gray-700 py-3 rounded-2xl font-bold text-xs hover:bg-gray-50 hover:border-gray-200 transition-all flex items-center justify-center gap-2 group"
             >
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
-                Google দিয়ে চালিয়ে যান
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-4 h-4 group-hover:scale-110 transition-transform" alt="Google" />
+                Google Login
             </button>
-         </div>
-         
-         <div className="bg-gray-50 p-4 text-center border-t border-gray-100">
-            <p className="text-xs font-medium text-gray-500">
-                একাউন্ট নেই? <a href="#" className="text-primary font-bold hover:underline">রেজিস্টার করুন</a>
+            
+            <p className="text-center mt-6 text-[10px] text-gray-400 font-medium">
+                নতুন ব্যবহারকারী? <a href="#" className="text-primary font-bold hover:underline">রেজিস্টার করুন</a>
             </p>
          </div>
       </div>
