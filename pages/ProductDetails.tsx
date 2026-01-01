@@ -7,7 +7,7 @@ import { doc, getDoc, collection, setDoc, Timestamp, query, limit, getDocs, wher
 import { 
   Minus, Plus, Loader2, ArrowRight, CheckCircle2, ShieldCheck, Truck, PackageCheck, 
   Banknote, ShoppingCart, Sparkles, Cpu, Layers, Zap, Award, ThumbsUp, Info, 
-  Star, Share2, Heart, Home, ChevronRight, Gift, Flame, Video, PlayCircle
+  Star, Heart, Home, ChevronRight, Gift, Flame, Video, PlayCircle
 } from 'lucide-react';
 
 interface ProductDetailsProps {

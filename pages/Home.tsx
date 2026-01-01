@@ -4,8 +4,8 @@ import { Product } from '../types';
 import { db } from '../firebase';
 import { collection, getDocs, limit, query } from 'firebase/firestore';
 import { 
-  Loader2, ChevronRight, Sparkles, Flame, Tag, Truck, ShieldCheck, 
-  CreditCard, LayoutDashboard, MessageCircle, Send, Timer, ShoppingBag, Zap, Star, ArrowRight
+  Loader2, ChevronRight, Sparkles, Tag, Truck, ShieldCheck, 
+  CreditCard, LayoutDashboard, MessageCircle, Send, Timer, ShoppingBag, Zap, ArrowRight
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { categoriesList } from '../data';

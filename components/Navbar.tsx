@@ -13,7 +13,7 @@ interface NavbarProps {
   onOpenCart: () => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ cartCount, addToCart, onOpenLogin, onOpenTracking, onOpenCart }) => {
+const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenLogin, onOpenTracking, onOpenCart }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   

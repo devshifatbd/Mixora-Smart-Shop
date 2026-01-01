@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
-import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc, query, orderBy, Timestamp, where, setDoc } from 'firebase/firestore';
-import { Product, Order, Coupon, CartItem } from '../types';
+import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc, query, orderBy, Timestamp, setDoc } from 'firebase/firestore';
+import { Product, Order, Coupon } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { 
   Package, ShoppingBag, Trash2, LogOut, Loader2, 
-  Home, AlertCircle, Link as LinkIcon, Image as ImageIcon, Plus, 
-  Edit, Copy, Save, X, CheckSquare, Square, Eye, Search,
-  Users, ChevronLeft, ChevronRight, Calendar, Truck, FileText, Printer, Store,
-  Menu as MenuIcon, LayoutDashboard, BarChart3, TrendingUp, DollarSign, Activity,
-  Ticket, Download, Filter, UploadCloud, Video, XCircle, Ban, Minus
+  Plus, Edit, Save, X, CheckSquare, Search,
+  Users, ChevronLeft, ChevronRight, Truck, FileText, Printer, Store,
+  LayoutDashboard, BarChart3, DollarSign, Ticket, Download, UploadCloud, Video, XCircle, Ban, Minus
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { categoriesList } from '../data';
@@ -24,9 +22,6 @@ const AdminDashboard: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { logout, isAdmin } = useAuth();
   const navigate = useNavigate();
-
-  // --- Report State ---
-  const [reportMonth, setReportMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // YYYY-MM
 
   // --- Product Management State ---
   const [viewMode, setViewMode] = useState<'list' | 'form'>('list');
@@ -45,7 +40,7 @@ const AdminDashboard: React.FC = () => {
     image: '',
     images: [],
     videoUrl: '',
-    videoUrls: [], // New for multiple videos
+    videoUrls: [], 
     status: 'Active',
     price: 0,
     originalPrice: 0,
@@ -69,7 +64,6 @@ const AdminDashboard: React.FC = () => {
   // --- Order Management State ---
   const [orderFilter, setOrderFilter] = useState('All Orders');
   const [orderSearch, setOrderSearch] = useState('');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null); 
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   
@@ -155,27 +149,8 @@ const AdminDashboard: React.FC = () => {
   const stats = calculateStats();
 
   const generateMonthlyReport = () => {
-     // ... (Existing Report Logic)
+     alert('Report generation feature coming soon!');
   };
-
-  const getTopSellingProducts = () => {
-     // ... (Existing Logic)
-      const productCounts: Record<string, { name: string; count: number; image: string; price: number }> = {};
-      orders.forEach(order => {
-          if (order.status !== 'Cancelled' && order.status !== 'Order Canceled') {
-              order.items.forEach(item => {
-                  if (productCounts[item.id]) {
-                      productCounts[item.id].count += item.quantity;
-                  } else {
-                      productCounts[item.id] = { name: item.name, count: item.quantity, image: item.image, price: item.price };
-                  }
-              });
-          }
-      });
-      return Object.values(productCounts).sort((a, b) => b.count - a.count).slice(0, 5);
-  };
-
-  const topSelling = getTopSellingProducts();
 
   const getCustomers = () => {
       const customerMap: Record<string, any> = {};
@@ -417,7 +392,6 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handlePrintInvoice = (order: Order) => {
-      // ... (Existing Invoice Logic)
       const discount = (order as any).discount || 0;
       const subTotal = order.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
       const printWindow = window.open('', '', 'width=900,height=900');
@@ -605,7 +579,6 @@ const AdminDashboard: React.FC = () => {
         
         {/* --- OVERVIEW TAB --- */}
         {activeTab === 'overview' && (
-          // ... (Overview content same as before) ...
            <div className="space-y-8 animate-fade-in">
              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -613,7 +586,6 @@ const AdminDashboard: React.FC = () => {
                     <p className="text-gray-500 font-medium mt-1">আজকের ব্যবসার আপডেট দেখে নিন</p>
                 </div>
                 <div className="flex gap-2 items-center">
-                    {/* ... report logic ... */}
                     <button onClick={generateMonthlyReport} className="bg-green-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-green-700 shadow-md">
                         <Download size={18} /> ডাউনলোড রিপোর্ট
                     </button>
@@ -622,7 +594,6 @@ const AdminDashboard: React.FC = () => {
              
              {/* Stats Cards */}
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-                 {/* ... (Existing Stat Cards) ... */}
                   <div className="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-6 rounded-[2rem] shadow-xl shadow-purple-200 text-white relative overflow-hidden group hover:-translate-y-1 transition duration-300">
                     <div className="absolute top-0 right-0 p-4 opacity-20 transform group-hover:scale-125 transition-transform duration-500"><BarChart3 size={70} /></div>
                     <div className="relative z-10">
@@ -661,15 +632,12 @@ const AdminDashboard: React.FC = () => {
                     <p className="text-xs text-white/80 mt-2 font-medium">আজকের বাতিল হওয়া অর্ডার</p>
                 </div>
              </div>
-             
-             {/* ... (Recent Orders & Top Selling) ... */}
            </div>
         )}
 
         {/* --- PRODUCTS TAB --- */}
         {activeTab === 'products' && (
           <div className="animate-fade-in space-y-6">
-             {/* ... (Existing List View) ... */}
              {viewMode === 'list' ? (
                 <>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -764,14 +732,18 @@ const AdminDashboard: React.FC = () => {
             ) : (
                 /* Full Form */
                 <div className="max-w-4xl mx-auto pb-10">
-                     {/* ... (Existing Form Code) ... */}
                      <div className="flex items-center gap-4 mb-6">
                         <button onClick={() => setViewMode('list')} className="p-3 bg-white rounded-2xl shadow-sm border border-gray-100 hover:bg-gray-50 text-gray-600"><ChevronLeft /></button>
                         <h2 className="text-2xl font-black text-gray-900">{formMode === 'add' ? 'নতুন পণ্য যোগ করুন' : 'পণ্য আপডেট করুন'}</h2>
                     </div>
                     
+                    {statusMessage && (
+                        <div className={`p-4 mb-6 rounded-xl font-bold text-sm ${statusMessage.type === 'success' ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
+                            {statusMessage.text}
+                        </div>
+                    )}
+
                     <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-8">
-                        
                         {/* 1. Basic Info */}
                         <div className="space-y-4">
                             <h3 className="text-lg font-black text-gray-800 border-b pb-2">সাধারণ তথ্য</h3>
@@ -1081,7 +1053,6 @@ const AdminDashboard: React.FC = () => {
 
         {/* --- CUSTOMERS TAB --- */}
         {activeTab === 'customers' && (
-             // ... existing customers ...
              <div className="space-y-6 animate-fade-in">
                 <h2 className="text-3xl font-black text-gray-900 tracking-tight">কাস্টমার তালিকা</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -1114,7 +1085,6 @@ const AdminDashboard: React.FC = () => {
       </main>
 
       {/* --- MOBILE BOTTOM NAV --- */}
-      {/* ... (Existing) ... */}
        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 flex items-center justify-around py-3 px-4 z-[60] pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)] rounded-t-[20px]">
           <button onClick={() => setActiveTab('overview')} className={`flex flex-col items-center p-1 rounded-xl transition-all ${activeTab === 'overview' ? 'text-primary scale-110' : 'text-gray-400'}`}>
               <LayoutDashboard size={22} strokeWidth={activeTab === 'overview' ? 2.5 : 2} />
@@ -1158,7 +1128,6 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               <div className="p-5 overflow-y-auto bg-[#F8F9FB] flex-1 space-y-6 scrollbar-hide">
-                  {/* ... (Existing Modal Content) ... */}
                   {/* Status Picker */}
                   <div className="bg-white p-5 rounded-[24px] shadow-sm border border-gray-100">
                       <p className="text-[10px] font-black text-gray-400 uppercase mb-3 tracking-widest ml-1">অর্ডার স্ট্যাটাস</p>

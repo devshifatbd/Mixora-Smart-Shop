@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { Search, Loader2, PackageCheck, MapPin, Calendar, X, Truck, CheckCircle2, Package } from 'lucide-react';
+import { Search, Loader2, MapPin, Calendar, X, Truck, CheckCircle2, Package } from 'lucide-react';
 
 interface TrackingModalProps {
   isOpen: boolean;
