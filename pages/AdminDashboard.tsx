@@ -512,6 +512,14 @@ const AdminDashboard: React.FC = () => {
     </button>
   );
 
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[#F0F2F5]">
+        <Loader2 className="animate-spin h-10 w-10 text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen bg-[#F0F2F5] flex flex-col md:flex-row font-sans overflow-hidden">
       
