@@ -4,111 +4,82 @@ import { Product } from '../types';
 import { db } from '../firebase';
 import { collection, getDocs, limit, query } from 'firebase/firestore';
 import { 
-  Loader2, 
-  ChevronRight, 
-  Shirt, 
-  ShoppingBag, 
-  Laptop, 
-  Home as HomeIcon, 
-  Heart, 
-  Activity, 
-  Baby, 
-  Gift 
+  Loader2, ChevronRight, Sparkles, Flame, Tag, Truck, ShieldCheck, 
+  CreditCard, LayoutDashboard, MessageCircle, Send, Timer, ShoppingBag, Zap, Star, ArrowRight
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { categoriesList } from '../data';
 
 interface HomeProps {
   addToCart: (product: Product) => void;
 }
 
-// Sub-component for individual category item to handle image errors independently
-const CategoryItem: React.FC<{ cat: string; imageUrl: string }> = ({ cat, imageUrl }) => {
-  const [imageError, setImageError] = useState(false);
-
-  // Fallback Icons if 3D image fails
-  const getFallbackIcon = () => {
-    if (cat.includes('পুরুষ')) return <Shirt className="w-8 h-8 text-indigo-500" />;
-    if (cat.includes('নারী')) return <ShoppingBag className="w-8 h-8 text-pink-500" />;
-    if (cat.includes('ইলেকট্রনিক্স')) return <Laptop className="w-8 h-8 text-blue-500" />;
-    if (cat.includes('গৃহস্থালী')) return <HomeIcon className="w-8 h-8 text-orange-500" />;
-    if (cat.includes('বিউটি')) return <Heart className="w-8 h-8 text-red-500" />;
-    if (cat.includes('খেলাধুলা')) return <Activity className="w-8 h-8 text-green-500" />;
-    if (cat.includes('কিডস')) return <Baby className="w-8 h-8 text-yellow-500" />;
-    return <Gift className="w-8 h-8 text-purple-500" />;
-  };
-
-  return (
-    <Link to={`/category/${cat}`} className="flex flex-col items-center cursor-pointer group">
-       <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-white border border-gray-100 shadow-[0_4px_12px_rgba(0,0,0,0.05)] flex items-center justify-center mb-3 transition-all duration-300 transform group-hover:-translate-y-2 group-hover:shadow-[0_10px_20px_rgba(0,0,0,0.1)] group-hover:border-secondary/30 relative overflow-hidden">
-          <div className="absolute inset-0 bg-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full"></div>
-          
-          {imageError ? (
-             getFallbackIcon()
-          ) : (
-             <img 
-               src={imageUrl} 
-               onError={() => setImageError(true)}
-               alt={cat}
-               className="w-10 h-10 md:w-14 md:h-14 object-contain z-10 drop-shadow-sm transition-transform duration-300 group-hover:scale-110"
-             />
-          )}
-       </div>
-       <span className="text-xs md:text-sm font-bold text-gray-700 text-center group-hover:text-secondary transition duration-300 px-1 leading-tight">
-        {cat}
-       </span>
-    </Link>
-  );
+// Updated Category Images as per user request
+const categoryIcons3D: Record<string, string> = {
+  'পুরুষদের ফ্যাশন': 'https://imrs.cartup.com/api/v1/image-resize?imageUrl=https://sl-dev-s3.s3.amazonaws.com/admin/resources/alt-men-s-fashion-1739454090154.png&width=180',
+  'নারীদের ফ্যাশন': 'https://imrs.cartup.com/api/v1/image-resize?imageUrl=https://sl-dev-s3.s3.amazonaws.com/admin/resources/women-s-fashion-1739453519658.png&width=180',
+  'ইলেকট্রনিক্স ও গ্যাজেট': 'https://imrs.cartup.com/api/v1/image-resize?imageUrl=https://sl-dev-s3.s3.amazonaws.com/admin/resources/electronic-accessories-1739453603406.png&width=180', 
+  'গৃহস্থালী ও লিভিং': 'https://imrs.cartup.com/api/v1/image-resize?imageUrl=https://sl-dev-s3.s3.amazonaws.com/admin/resources/tv-home-appliance-1739453546671.png&width=180', 
+  'বিউটি ও পার্সোনাল কেয়ার': 'https://imrs.cartup.com/api/v1/image-resize?imageUrl=https://sl-dev-s3.s3.amazonaws.com/admin/resources/health-beauty-1739453480173.png&width=180',
+  'খেলাধুলা ও ফিটনেস': 'https://imrs.cartup.com/api/v1/image-resize?imageUrl=https://sl-dev-s3.s3.amazonaws.com/admin/resources/sports-outdoors-1739453653455.png&width=180',
+  'কিডস ও টয়েজ': 'https://imrs.cartup.com/api/v1/image-resize?imageUrl=https://sl-dev-s3.s3.amazonaws.com/admin/resources/automotive-motorcycle-1739453692433.png&width=180',
+  'গিফট ও স্টেশনারি': 'https://imrs.cartup.com/api/v1/image-resize?imageUrl=https://sl-dev-s3.s3.amazonaws.com/admin/resources/watches-bags-1739453629792.png&width=180',
 };
+
+// Fallback Icons (Lucide)
+const categoryIconsFallback: Record<string, any> = {
+  'পুরুষদের ফ্যাশন': Tag,
+  'নারীদের ফ্যাশন': Sparkles,
+  'ইলেকট্রনিক্স ও গ্যাজেট': Zap,
+  'গৃহস্থালী ও লিভিং': Tag,
+  'বিউটি ও পার্সোনাল কেয়ার': Sparkles,
+  'খেলাধুলা ও ফিটনেস': Tag,
+  'কিডস ও টয়েজ': Tag,
+  'গিফট ও স্টেশনারি': Tag,
+};
+
+const slides = [
+  { 
+    id: 1, 
+    bgImage: "https://i.pinimg.com/736x/2b/fe/52/2bfe5239a045e652557d8bb742fc28e2.jpg", 
+    title: "রিভিউ & উইন",
+    highlight: "১০০০ টাকার ভাউচার", 
+    description: "মিক্সোরা সুপার শপ থেকে পণ্য কিনে রিভিউ দিয়ে জিতে নিন নিশ্চিত উপহার।",
+    btnText: "শপ করুন",
+    btnColor: "bg-white text-blue-600"
+  },
+  { 
+    id: 2, 
+    bgImage: "https://i.pinimg.com/736x/6a/33/40/6a33404103b3158d6d07ed1a0a8a72fc.jpg", 
+    title: "ঈদ কালেকশন",
+    highlight: "৭০% পর্যন্ত ছাড়",
+    description: "এক্সক্লুসিভ ডিজাইন এবং প্রিমিয়াম কোয়ালিটির ঈদ কালেকশন এখন হাতের মুঠোয়।",
+    btnText: "অর্ডার করুন",
+    btnColor: "bg-white text-pink-600"
+  },
+  { 
+    id: 3, 
+    bgImage: "https://i.pinimg.com/736x/2a/b7/a0/2ab7a0ba8df54ccce0c0ae8001935864.jpg", 
+    title: "গ্যাজেট ফেস্ট",
+    highlight: "সেরা দামে সেরা পণ্য",
+    description: "অরিজিনাল স্মার্টওয়াচ, ইয়ারবাড এবং এক্সেসরিজ এর বিশাল সমাহার।",
+    btnText: "দেখুন",
+    btnColor: "bg-white text-cyan-600"
+  },
+];
 
 const Home: React.FC<HomeProps> = ({ addToCart }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  const slides = [
-    { 
-      id: 1, 
-      image: "https://t4.ftcdn.net/jpg/07/51/66/05/360_F_751660549_sbBTsejzwpjXlmuoCk66VTQZGO3hztjy.jpg", 
-      title: "সামার ফ্যাশন ফেস্ট", 
-      subtitle: "স্টাইলিশ লুক আর কমফোর্ট, সবই এখন হাতের মুঠোয়।",
-      buttonText: "কালেকশন দেখুন",
-      overlayClass: "bg-gradient-to-r from-orange-500/80 to-transparent",
-      textClass: "text-white",
-      btnClass: "bg-white text-orange-600 hover:bg-orange-100"
-    },
-    { 
-      id: 2, 
-      image: "https://freedesignfile.com/upload/2020/07/Online-Shopping-Banner-Mobile-App-Vector.jpg", 
-      title: "স্মার্ট শপিং উৎসব", 
-      subtitle: "আপনার পছন্দের সব পণ্য এখন এক ক্লিকেই।",
-      buttonText: "অর্ডার করুন",
-      overlayClass: "bg-gradient-to-r from-blue-900/70 to-transparent",
-      textClass: "text-white",
-      btnClass: "bg-[#FFD700] text-blue-900 hover:bg-yellow-400"
-    },
-    { 
-      id: 3, 
-      image: "https://cdn.vectorstock.com/i/500p/40/25/smartphone-shopping-app-vector-33184025.jpg", 
-      title: "গ্যাজেট ধামাকা", 
-      subtitle: "লেটেস্ট টেকনোলজি, অবিশ্বাস্য দামে।",
-      buttonText: "অফার লুফে নিন",
-      overlayClass: "bg-gradient-to-r from-emerald-900/80 to-transparent",
-      textClass: "text-white",
-      btnClass: "bg-emerald-500 text-white hover:bg-emerald-600"
-    },
-  ];
+  const [timeLeft, setTimeLeft] = useState({ hours: 5, minutes: 12, seconds: 30 });
+  const navigate = useNavigate();
 
-  // Reliable Microsoft 3D Fluent Emoji URLs
-  const categoryImages: Record<string, string> = {
-    'পুরুষদের ফ্যাশন': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/T-shirt.png',
-    'নারীদের ফ্যাশন': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Dress.png',
-    'ইলেকট্রনিক্স ও গ্যাজেট': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Laptop.png',
-    'গৃহস্থালী ও লিভিং': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Couch%20and%20lamp.png',
-    'বিউটি ও পার্সোনাল কেয়ার': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Lipstick.png',
-    'খেলাধুলা ও ফিটনেস': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Activities/Soccer%20ball.png',
-    'কিডস ও টয়েজ': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Teddy%20bear.png',
-    'গিফট ও স্টেশনারি': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Wrapped%20gift.png'
+  // Handle Image Error for Categories
+  const [imgError, setImgError] = useState<Record<string, boolean>>({});
+
+  const handleImageError = (cat: string) => {
+    setImgError(prev => ({ ...prev, [cat]: true }));
   };
 
   useEffect(() => {
@@ -134,153 +105,309 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, [slides.length]);
+  }, []);
+
+  // Flash Sale Timer Logic
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
+        if (prev.minutes > 0) return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
+        if (prev.hours > 0) return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        return { hours: 0, minutes: 0, seconds: 0 }; // Ended
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleDirectOrder = (product: Product) => {
+    addToCart(product);
+    navigate('/cart');
+  };
 
   return (
-    <div className="min-h-screen bg-[#F1F2F4] font-sans">
+    <div className="min-h-screen bg-[#F1F2F4] font-sans pb-20">
       
-      {/* 1. Hero Section (Expanded Slider + Right Banner) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 mb-6">
-         <div className="grid grid-cols-12 gap-4 h-auto md:h-[400px]">
-            
-            {/* Main Slider (Expanded to 9 cols) - Added min-h-[200px] for mobile */}
-            <div className="col-span-12 md:col-span-9 relative rounded-2xl overflow-hidden shadow-sm group min-h-[220px]">
-               {slides.map((slide, index) => (
-                  <div 
-                     key={slide.id}
-                     className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
-                  >
-                     <img src={slide.image} alt={slide.title} className="w-full h-full object-cover transform scale-100 group-hover:scale-105 transition duration-1000" />
-                     {/* Dynamic Creative Overlay */}
-                     <div className={`absolute inset-0 ${slide.overlayClass} flex items-center`}>
-                        <div className={`px-6 md:px-16 max-w-lg ${slide.textClass} animate-fade-in-up`}>
-                           <h2 className="text-2xl md:text-5xl font-extrabold mb-2 md:mb-3 font-sans leading-tight drop-shadow-md">
-                             {slide.title}
-                           </h2>
-                           <p className="text-sm md:text-xl font-medium mb-4 md:mb-8 opacity-95 drop-shadow-sm line-clamp-2 md:line-clamp-none">
-                             {slide.subtitle}
-                           </p>
-                           <button className={`${slide.btnClass} px-6 py-2 md:px-8 md:py-3 rounded-full font-bold transition shadow-lg text-xs md:text-sm uppercase tracking-wide transform hover:-translate-y-1 hover:shadow-xl duration-300`}>
-                              {slide.buttonText}
-                           </button>
-                        </div>
-                     </div>
+      {/* 1. HERO SECTION */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+              
+              {/* Left: Main Slider (75% Width) */}
+              <div className="lg:col-span-3 relative h-[250px] md:h-[400px] rounded-2xl overflow-hidden shadow-sm group">
+                  {slides.map((slide, index) => (
+                      <div 
+                        key={slide.id}
+                        className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}
+                      >
+                          <img 
+                            src={slide.bgImage} 
+                            alt={slide.title} 
+                            className="w-full h-full object-cover transform scale-105 group-hover:scale-100 transition-transform duration-[2000ms]"
+                          />
+                          {/* Dark Overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent flex flex-col justify-center px-8 md:px-16 text-white">
+                              <div className="animate-fade-in-up max-w-xl">
+                                 <h2 className="text-3xl md:text-6xl font-black mb-3 uppercase tracking-tight drop-shadow-2xl leading-none">
+                                   {slide.title}
+                                 </h2>
+                                 <div className="bg-white/10 backdrop-blur-md inline-block px-4 py-2 rounded-lg border-l-4 border-yellow-400 mb-5">
+                                    <h3 className="text-xl md:text-3xl font-bold text-yellow-300 drop-shadow-md tracking-wider">{slide.highlight}</h3>
+                                 </div>
+                                 <p className="text-sm md:text-lg mb-8 font-medium text-gray-200 drop-shadow-md leading-relaxed max-w-md hidden md:block">
+                                   {slide.description}
+                                 </p>
+                                 <button 
+                                    onClick={() => navigate('/category/all')}
+                                    className={`${slide.btnColor} px-8 py-3.5 rounded-full font-bold shadow-[0_10px_20px_rgba(0,0,0,0.2)] hover:shadow-[0_15px_30px_rgba(0,0,0,0.3)] hover:-translate-y-1 transition-all duration-300 flex items-center gap-2 text-sm uppercase tracking-wider`}
+                                 >
+                                    {slide.btnText} <ChevronRight size={18} />
+                                 </button>
+                              </div>
+                          </div>
+                      </div>
+                  ))}
+                  
+                  {/* Dots */}
+                  <div className="absolute bottom-5 left-8 md:left-16 flex space-x-2 z-20">
+                    {slides.map((_, idx) => (
+                        <button 
+                        key={idx}
+                        onClick={() => setCurrentSlide(idx)}
+                        className={`h-1.5 rounded-full transition-all duration-300 shadow-sm ${idx === currentSlide ? 'bg-yellow-400 w-8' : 'bg-white/40 w-2'}`}
+                        />
+                    ))}
                   </div>
-               ))}
-               
-               {/* Slider Controls */}
-               <div className="absolute bottom-4 md:bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20">
-                 {slides.map((_, idx) => (
-                   <button 
-                     key={idx}
-                     className={`h-2 md:h-2.5 rounded-full transition-all duration-300 shadow-sm ${idx === currentSlide ? 'bg-white w-6 md:w-8' : 'bg-white/40 w-2 md:w-2.5 hover:bg-white/60'}`}
-                     onClick={() => setCurrentSlide(idx)}
-                  />
-                 ))}
-               </div>
-            </div>
+              </div>
 
-            {/* Right Banners (Desktop Only - 3 cols) */}
-            <div className="hidden md:flex col-span-3 flex-col gap-4 h-full">
-               
-               {/* Banner 1: Gadgets */}
-               <div className="flex-1 rounded-2xl overflow-hidden relative group cursor-pointer shadow-sm">
-                  <img 
-                    src="https://www.slashgear.com/img/gallery/12-smart-gadgets-you-didnt-know-existed-upgrade/intro-1712278582.jpg" 
-                    className="w-full h-full object-cover group-hover:scale-110 transition duration-700" 
-                    alt="Gadgets" 
-                  />
-                  <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition duration-300 flex flex-col justify-end p-6">
-                     <span className="text-[10px] font-bold bg-secondary text-white px-2 py-0.5 rounded w-fit mb-2">ট্রেন্ডিং</span>
-                     <h3 className="font-bold text-xl text-white leading-none">ফিউচার টেক</h3>
-                     <p className="text-gray-200 text-xs mt-1">আপগ্রেড ইয়োর লাইফ</p>
+              {/* Right: WhatsApp Order Card */}
+              <div className="lg:col-span-1 hidden lg:flex flex-col gap-4">
+                  <div className="bg-[#128C7E] h-full rounded-2xl shadow-lg p-6 relative overflow-hidden flex flex-col justify-center items-center text-center group cursor-pointer border border-[#075E54]">
+                      
+                      {/* Background Patterns */}
+                      <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://i.pinimg.com/originals/97/66/6a/97666a36f7556dbbe0147c234907954a.jpg')] bg-cover"></div>
+                      
+                      <div className="relative z-10 bg-white/10 backdrop-blur-md p-4 rounded-full mb-4 border border-white/20 animate-bounce-slow">
+                          <MessageCircle className="h-10 w-10 text-white fill-white" />
+                      </div>
+                      
+                      <h3 className="relative z-10 text-white font-black text-xl mb-1 uppercase tracking-tight">অর্ডার করুন</h3>
+                      <h4 className="relative z-10 text-yellow-300 font-bold text-sm mb-4">সরাসরি হোয়াটসঅ্যাপে</h4>
+
+                      <div className="relative z-10 bg-white rounded-xl py-3 px-6 w-full mb-4 shadow-lg">
+                          <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-1">হটলাইন নাম্বার</p>
+                          <p className="text-2xl font-black text-[#128C7E]">01711-728660</p>
+                      </div>
+
+                      <a 
+                          href="https://wa.me/8801711728660" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="relative z-10 w-full bg-[#25D366] hover:bg-[#1da851] text-white font-bold py-3.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 border-b-4 border-[#075E54] active:border-b-0 active:translate-y-1"
+                      >
+                         <Send size={18} /> মেসেজ পাঠান
+                      </a>
+                      
+                      <p className="relative z-10 text-white/70 text-[10px] mt-4 font-medium">২৪/৭ কাস্টমার সাপোর্ট</p>
                   </div>
-               </div>
-
-               {/* Banner 2: Beauty */}
-               <div className="flex-1 rounded-2xl overflow-hidden relative group cursor-pointer shadow-sm">
-                  <img 
-                    src="https://st.depositphotos.com/1684571/1468/i/450/depositphotos_14680941-stock-photo-woman-receiving-facial-mask-at.jpg" 
-                    className="w-full h-full object-cover group-hover:scale-110 transition duration-700" 
-                    alt="Beauty" 
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent flex flex-col justify-end p-6">
-                     <span className="text-[10px] font-bold bg-pink-500 text-white px-2 py-0.5 rounded w-fit mb-2">স্পেশাল</span>
-                     <h3 className="font-bold text-xl text-white leading-none">গ্লোয়িং স্কিন</h3>
-                     <p className="text-gray-200 text-xs mt-1">ন্যাচারাল বিউটি কেয়ার</p>
-                  </div>
-               </div>
-
-            </div>
-         </div>
-      </div>
-
-      {/* 2. Shop by Category (3D Icons & Creative Design) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-         <div className="bg-white p-8 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white relative overflow-hidden">
-            {/* Background Decoration */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 rounded-full blur-3xl -z-10 transform translate-x-1/2 -translate-y-1/2"></div>
-            
-            <h2 className="text-2xl font-bold text-gray-800 mb-8 flex items-center gap-2 justify-center md:justify-start">
-               <span className="text-3xl">📦</span> জনপ্রিয় ক্যাটাগরি
-            </h2>
-            <div className="grid grid-cols-4 md:grid-cols-8 gap-4 md:gap-6">
-              {categoriesList.map((cat, idx) => (
-                <CategoryItem 
-                  key={idx} 
-                  cat={cat} 
-                  imageUrl={categoryImages[cat] || 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Cardboard%20box.png'} 
-                />
-              ))}
-            </div>
-         </div>
-      </div>
-
-      {/* 3. Flash Sale / Featured Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-         <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-               <h2 className="text-xl font-bold text-gray-800">ফ্ল্যাশ ডিল</h2>
-               <div className="hidden md:flex items-center gap-2 text-white text-xs font-bold">
-                  <span className="bg-primary px-2 py-1 rounded-md shadow-sm">০০</span> :
-                  <span className="bg-primary px-2 py-1 rounded-md shadow-sm">১২</span> :
-                  <span className="bg-primary px-2 py-1 rounded-md shadow-sm">৪৫</span>
-               </div>
-            </div>
-            <Link to="/category/all" className="text-secondary text-sm font-bold flex items-center hover:underline">সব দেখুন <ChevronRight className="h-4 w-4" /></Link>
-         </div>
-         
-         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-             {products.slice(0, 5).map(product => (
-                <ProductCard key={product.id} product={product} addToCart={addToCart} />
-             ))}
-         </div>
-      </div>
-
-      {/* 4. Main Product Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
-        <div className="flex items-center justify-between mb-4 border-b border-gray-200 pb-2">
-          <h2 className="text-xl font-bold text-gray-800">আপনার জন্য সেরা</h2>
-          <div className="flex gap-4">
-             <button className="text-secondary font-bold border-b-2 border-secondary pb-2 text-sm">সব</button>
-             <button className="text-gray-500 hover:text-secondary font-medium text-sm pb-2">নতুন</button>
-             <button className="text-gray-500 hover:text-secondary font-medium text-sm pb-2">বেস্ট সেলিং</button>
+              </div>
           </div>
+      </div>
+
+      {/* 2. SERVICE INFO BAR */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
+              {[
+                {icon: Tag, color: 'text-pink-600', bg: 'bg-pink-50', title: 'সেরা দাম', desc: 'প্রতিদিন সাশ্রয়ী মূল্য'},
+                {icon: ShieldCheck, color: 'text-purple-600', bg: 'bg-purple-50', title: '১০০% অরিজিনাল', desc: 'জেনুইন পণ্যের নিশ্চয়তা'},
+                {icon: CreditCard, color: 'text-blue-600', bg: 'bg-blue-50', title: 'নিরাপদ পেমেন্ট', desc: 'ক্যাশ অন ডেলিভারি সুবিধা'},
+                {icon: Truck, color: 'text-orange-600', bg: 'bg-orange-50', title: 'দ্রুত ডেলিভারি', desc: 'সমগ্র বাংলাদেশে'},
+              ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-4 group">
+                      <div className={`${item.bg} p-3.5 rounded-2xl ${item.color} group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
+                          <item.icon size={22} />
+                      </div>
+                      <div>
+                          <h4 className="text-sm font-bold text-gray-900 group-hover:text-primary transition-colors">{item.title}</h4>
+                          <p className="text-[10px] text-gray-500 font-medium">{item.desc}</p>
+                      </div>
+                  </div>
+              ))}
+          </div>
+      </div>
+
+      {/* 3. MIDDLE BANNER */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+          <div className="relative rounded-[2rem] overflow-hidden h-[160px] md:h-[260px] shadow-lg group cursor-pointer">
+             <img 
+               src="https://i.pinimg.com/1200x/ee/06/b5/ee06b50d83e0da8b9f57eae955246ccd.jpg" 
+               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+               alt="Sale Banner" 
+             />
+             <div className="absolute inset-0 bg-gradient-to-r from-purple-900/90 via-purple-900/50 to-transparent flex items-center px-8 md:px-20">
+                 <div className="text-white transform group-hover:translate-x-2 transition-transform duration-500">
+                     <div className="bg-yellow-400 text-purple-900 inline-block px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest mb-3 shadow-md">Limited Time Offer</div>
+                     <h2 className="text-3xl md:text-6xl font-black mb-3 italic tracking-tight">YEAR END <span className="text-transparent bg-clip-text bg-gradient-to-br from-yellow-300 to-orange-500">SALE</span></h2>
+                     <p className="text-sm md:text-lg text-gray-200 mb-6 font-medium max-w-md">আমাদের সব প্রিমিয়াম কালেকশনে পাচ্ছেন বিশেষ ছাড়। স্টক শেষ হওয়ার আগেই অর্ডার করুন।</p>
+                     <button onClick={() => navigate('/category/all')} className="bg-white text-purple-900 px-8 py-3 rounded-full font-bold text-sm hover:bg-yellow-400 transition-colors shadow-lg shadow-purple-900/20">
+                         অফারগুলো দেখুন
+                     </button>
+                 </div>
+             </div>
+          </div>
+      </div>
+
+      {/* 4. CATEGORIES (Direct Images) */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+         <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+            <LayoutDashboard className="text-primary" size={24} /> জনপ্রিয় ক্যাটাগরি
+         </h2>
+         <div className="grid grid-cols-4 md:grid-cols-8 gap-4">
+            {categoriesList.map((cat, idx) => {
+               const FallbackIcon = categoryIconsFallback[cat] || Tag;
+               return (
+               <Link to={`/category/${cat}`} key={idx} className="flex flex-col items-center gap-2 group cursor-pointer">
+                  <div className="w-20 h-20 md:w-28 md:h-28 flex items-center justify-center transition-transform duration-300 transform group-hover:scale-110">
+                      {!imgError[cat] ? (
+                          <img 
+                            src={categoryIcons3D[cat]} 
+                            alt={cat}
+                            className="w-full h-full object-contain drop-shadow-md z-10"
+                            onError={() => handleImageError(cat)}
+                          />
+                      ) : (
+                          <FallbackIcon className="w-8 h-8 md:w-10 md:h-10 text-gray-600 group-hover:text-primary transition-colors z-10" />
+                      )}
+                  </div>
+                  <span className="text-[11px] md:text-sm font-bold text-gray-700 text-center leading-tight group-hover:text-primary transition-colors line-clamp-2">
+                     {cat}
+                  </span>
+               </Link>
+            )})}
+         </div>
+      </div>
+
+      {/* 5. FLASH SALE SECTION (Updated Vibrant Design) */}
+      <section className="my-10 py-12 relative overflow-hidden bg-gradient-to-r from-rose-600 via-red-500 to-orange-500">
+         {/* Background Elements */}
+         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20"></div>
+         <div className="absolute -top-32 -left-32 w-80 h-80 bg-orange-300 rounded-full blur-[100px] opacity-40 animate-pulse"></div>
+         <div className="absolute -bottom-32 -right-32 w-80 h-80 bg-purple-600 rounded-full blur-[100px] opacity-40"></div>
+         
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            
+            <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-6 border-b border-white/20 pb-6">
+                <div className="flex items-center gap-4 text-white">
+                   <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-md shadow-lg border border-white/30">
+                        <Zap className="w-8 h-8 text-yellow-300 fill-yellow-300 animate-bounce" />
+                   </div>
+                   <div>
+                       <h2 className="text-3xl md:text-5xl font-black uppercase italic tracking-tighter drop-shadow-lg leading-none mb-1">Flash <span className="text-yellow-300">Sale</span></h2>
+                       <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-white rounded-full animate-ping"></span>
+                          <p className="text-white/90 text-sm font-bold tracking-[0.2em] uppercase">Limited Time Offer</p>
+                       </div>
+                   </div>
+                </div>
+                
+                {/* Timer Pill */}
+                <div className="flex items-center gap-2 bg-black/20 backdrop-blur-md px-6 py-3 rounded-full border border-white/10 shadow-xl">
+                   <Timer className="text-white w-5 h-5" />
+                   <div className="text-white font-mono font-bold text-lg flex gap-1">
+                      <span>{timeLeft.hours.toString().padStart(2, '0')}</span><span className="opacity-50">:</span>
+                      <span>{timeLeft.minutes.toString().padStart(2, '0')}</span><span className="opacity-50">:</span>
+                      <span className="text-yellow-300">{timeLeft.seconds.toString().padStart(2, '0')}</span>
+                   </div>
+                </div>
+
+                <button onClick={() => navigate('/category/all')} className="hidden md:flex bg-white text-rose-600 px-8 py-3 rounded-full font-bold text-sm hover:bg-gray-100 hover:scale-105 transition shadow-xl shadow-black/10 items-center gap-2">
+                    সকল ডিল দেখুন <ArrowRight size={16} />
+                </button>
+            </div>
+
+            {/* Grid of 4 Items */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                {products.slice(0, 4).map((product) => {
+                    const soldPercent = 75 + Math.floor(Math.random() * 20); // Random high sold percent for demo
+                    return (
+                    <div key={product.id} className="bg-white rounded-3xl overflow-hidden shadow-xl shadow-red-900/20 group cursor-pointer hover:-translate-y-2 transition-all duration-300 flex flex-col h-full border-4 border-transparent hover:border-white/50 relative" onClick={() => navigate(`/product/${product.id}`)}>
+                        
+                        {/* Discount Sticker */}
+                        <div className="absolute top-0 right-0 bg-yellow-400 text-red-900 font-black text-xs px-3 py-1.5 rounded-bl-2xl z-20 shadow-sm">
+                             -25%
+                        </div>
+
+                        {/* Image */}
+                        <div className="relative aspect-square bg-gray-50 p-4 overflow-hidden">
+                            <img 
+                                src={product.image} 
+                                className="w-full h-full object-contain mix-blend-multiply transition-transform duration-700 group-hover:scale-110" 
+                                alt={product.name}
+                            />
+                        </div>
+                        
+                        {/* Info */}
+                        <div className="p-4 flex flex-col flex-grow relative bg-white">
+                            <h3 className="text-sm font-bold text-gray-800 line-clamp-2 mb-2 h-10 group-hover:text-rose-600 transition-colors">{product.name}</h3>
+                            
+                            <div className="flex items-end gap-2 mb-3">
+                                <span className="text-xl font-black text-rose-600">৳{product.price}</span>
+                                <span className="text-xs text-gray-400 line-through mb-1 font-bold">৳{Math.round(product.price * 1.25)}</span>
+                            </div>
+
+                            <div className="mt-auto">
+                                <div className="flex justify-between text-[9px] font-bold text-gray-500 mb-1 uppercase tracking-wide">
+                                    <span className="text-orange-500">Sold: {soldPercent}%</span>
+                                    <span>Available: {100 - soldPercent}%</span>
+                                </div>
+                                <div className="w-full bg-gray-100 rounded-full h-2.5 mb-3 overflow-hidden border border-gray-100">
+                                    <div className="bg-gradient-to-r from-orange-400 to-rose-600 h-full rounded-full shadow-sm" style={{ width: `${soldPercent}%` }}></div>
+                                </div>
+                                
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); handleDirectOrder(product); }}
+                                    className="w-full bg-gray-900 text-white font-bold py-2.5 rounded-xl text-xs hover:bg-rose-600 transition-colors flex items-center justify-center gap-2 shadow-lg group-hover:shadow-rose-500/30"
+                                >
+                                    <ShoppingBag size={14} /> Buy Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )})}
+            </div>
+            
+            <div className="mt-8 text-center md:hidden">
+                <button onClick={() => navigate('/category/all')} className="inline-flex bg-white/20 backdrop-blur-sm border border-white/40 text-white px-8 py-3 rounded-full font-bold text-sm hover:bg-white hover:text-rose-600 transition shadow-lg items-center gap-2">
+                    View All Deals <ArrowRight size={16} />
+                </button>
+            </div>
+         </div>
+      </section>
+
+      {/* 6. JUST FOR YOU */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+        <div className="flex items-center justify-between mb-8 border-b border-gray-200 pb-4">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <span className="text-primary"><Sparkles size={24} fill="currentColor" /></span> আপনার জন্য সেরা
+          </h2>
+          <Link to="/category/all" className="text-sm font-bold text-primary hover:underline">আরও দেখুন</Link>
         </div>
         
         {loading ? (
-           <div className="flex justify-center py-20 bg-white rounded-lg"><Loader2 className="animate-spin h-10 w-10 text-secondary" /></div>
+           <div className="flex justify-center py-20"><Loader2 className="animate-spin h-10 w-10 text-primary" /></div>
         ) : (
-           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
+           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {products.map(product => (
                 <ProductCard key={product.id} product={product} addToCart={addToCart} />
               ))}
            </div>
         )}
-        <div className="text-center mt-8">
-           <Link to="/category/all" className="inline-block border-2 border-secondary text-secondary px-10 py-2.5 rounded-full font-bold hover:bg-secondary hover:text-white transition text-sm uppercase tracking-wider">আরো দেখুন</Link>
+        
+        <div className="mt-12 text-center">
+             <button onClick={() => navigate('/category/all')} className="bg-white border-2 border-gray-200 text-gray-700 px-12 py-3.5 rounded-full font-bold hover:border-primary hover:text-primary transition shadow-sm text-sm uppercase tracking-wide hover:shadow-lg">
+                 আরো লোড করুন
+             </button>
         </div>
-      </div>
+      </section>
 
     </div>
   );

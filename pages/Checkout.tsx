@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { CartItem } from '../types';
+import { CartItem, Coupon } from '../types';
 import { db } from '../firebase';
-import { collection, setDoc, doc, Timestamp, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, setDoc, doc, Timestamp, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Loader2, ArrowRight, CheckCircle2, Ticket } from 'lucide-react';
 
 interface CheckoutProps {
   cartItems: CartItem[];
@@ -22,21 +22,59 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, clearCart }) => {
   const [loading, setLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<{id: string, total: number} | null>(null);
 
+  // Coupon State
+  const [couponCode, setCouponCode] = useState('');
+  const [discount, setDiscount] = useState(0);
+  const [couponError, setCouponError] = useState('');
+  const [couponSuccess, setCouponSuccess] = useState('');
+
   const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const shipping = formData.city === 'Dhaka City' ? 70 : 120;
-  const total = subtotal + shipping;
+  const total = subtotal + shipping - discount;
+
+  const handleApplyCoupon = async () => {
+      setCouponError('');
+      setCouponSuccess('');
+      if(!couponCode) return;
+
+      try {
+          const q = query(collection(db, 'coupons'), where('code', '==', couponCode.toUpperCase()), where('status', '==', 'active'));
+          const snapshot = await getDocs(q);
+          
+          if(snapshot.empty) {
+              setCouponError('Invalid Coupon Code');
+              setDiscount(0);
+              return;
+          }
+
+          const coupon = snapshot.docs[0].data() as Coupon;
+          if(coupon.minOrderAmount && subtotal < coupon.minOrderAmount) {
+              setCouponError(`Minimum order amount ৳${coupon.minOrderAmount} required`);
+              setDiscount(0);
+              return;
+          }
+
+          let discountAmount = 0;
+          if(coupon.discountType === 'percentage') {
+              discountAmount = Math.round((subtotal * coupon.discountAmount) / 100);
+          } else {
+              discountAmount = coupon.discountAmount;
+          }
+
+          setDiscount(discountAmount);
+          setCouponSuccess(`Applied! You saved ৳${discountAmount}`);
+      } catch (err) {
+          console.error(err);
+          setCouponError('Error applying coupon');
+      }
+  };
 
   const generateOrderId = async () => {
     const now = new Date();
-    
-    // Get last 2 digits of year (YY)
     const yearShort = now.getFullYear().toString().slice(-2); 
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
     const day = now.getDate().toString().padStart(2, '0');
-    
-    // Format: YYMMDD (e.g., 231027)
     const datePrefix = `${yearShort}${month}${day}`;
-    
     let newSequence = '01';
 
     try {
@@ -45,7 +83,6 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, clearCart }) => {
 
         if (!querySnapshot.empty) {
             const lastOrderId = querySnapshot.docs[0].id;
-            // Check based on new prefix length (6 chars: YYMMDD)
             if (lastOrderId && lastOrderId.startsWith(datePrefix)) {
                 const currentSeqStr = lastOrderId.substring(6);
                 const currentSeq = parseInt(currentSeqStr, 10);
@@ -68,7 +105,6 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, clearCart }) => {
     try {
       const customOrderId = await generateOrderId();
 
-      // Use setDoc with custom ID
       await setDoc(doc(db, 'orders', customOrderId), {
         id: customOrderId,
         customerName: formData.name,
@@ -76,6 +112,9 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, clearCart }) => {
         customerAddress: `${formData.address}, ${formData.city}`,
         items: cartItems,
         totalAmount: total,
+        subTotal: subtotal,
+        discount: discount,
+        couponCode: discount > 0 ? couponCode : null,
         shippingCost: shipping,
         status: 'Pending',
         paymentMethod: formData.paymentMethod,
@@ -84,6 +123,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, clearCart }) => {
 
       setOrderSuccess({ id: customOrderId, total: total });
       clearCart();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       console.error("Order error:", error);
       alert('অর্ডার করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
@@ -186,6 +226,22 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, clearCart }) => {
                    ))}
                 </div>
                 
+                {/* Coupon Code Section */}
+                <div className="mb-4">
+                    <div className="flex gap-2">
+                        <input 
+                            type="text" 
+                            placeholder="Coupon Code" 
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm uppercase"
+                            value={couponCode}
+                            onChange={e => setCouponCode(e.target.value)}
+                        />
+                        <button onClick={handleApplyCoupon} type="button" className="bg-gray-800 text-white px-3 rounded-lg text-xs font-bold"><Ticket size={16} /></button>
+                    </div>
+                    {couponError && <p className="text-red-500 text-xs mt-1 font-bold">{couponError}</p>}
+                    {couponSuccess && <p className="text-green-500 text-xs mt-1 font-bold">{couponSuccess}</p>}
+                </div>
+
                 <div className="bg-gray-50 p-4 rounded-lg border border-dashed border-gray-300">
                    <div className="flex justify-between text-gray-700 mb-2">
                       <span>সাবটোটাল</span>
@@ -195,6 +251,12 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, clearCart }) => {
                       <span>ডেলিভারি</span>
                       <span className="text-red-500 font-bold">+ ৳ {shipping}</span>
                    </div>
+                   {discount > 0 && (
+                       <div className="flex justify-between text-gray-700 mb-2">
+                          <span>ডিসকাউন্ট</span>
+                          <span className="text-green-600 font-bold">- ৳ {discount}</span>
+                       </div>
+                   )}
                    <div className="flex justify-between font-extrabold text-xl text-primary pt-2 border-t border-gray-200 mt-2">
                       <span>সর্বমোট</span>
                       <span>৳ {total}</span>

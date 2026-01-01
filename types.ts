@@ -10,7 +10,8 @@ export interface Product {
   
   image: string; // Main thumbnail
   images?: string[]; // Multiple images support
-  videoUrl?: string; // New
+  videoUrls?: string[]; // New: Supports multiple videos
+  videoUrl?: string; // Legacy support
   
   stock: boolean;
   stockQuantity?: number; // New
@@ -63,8 +64,21 @@ export interface Order {
   customerAddress: string;
   items: CartItem[];
   totalAmount: number;
+  subTotal?: number; // New
+  discount?: number; // New
+  couponCode?: string; // New
   shippingCost: number;
   status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Order Placed' | 'Order Confirmed' | 'Order Completed' | 'Order Returned' | 'Order Canceled';
   paymentMethod: string;
   createdAt: any; 
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  discountType: 'fixed' | 'percentage';
+  discountAmount: number;
+  minOrderAmount?: number;
+  status: 'active' | 'inactive';
+  usageCount: number;
 }

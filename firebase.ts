@@ -19,7 +19,8 @@ const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const db = getFirestore(app);
 const auth = getAuth(app);
-// Storage removed to support Spark Plan better
-// const storage = getStorage(app);
+
+// Storage removed as we are using Google Drive
+// const storage = getStorage(app); 
 
 export { app, analytics, db, auth };

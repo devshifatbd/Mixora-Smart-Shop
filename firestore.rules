@@ -8,16 +8,23 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.token.email == 'mixorasmartshop@gmail.com';
     }
 
-    // ক্যাটাগরি কালেকশন রুলস
-    match /categories/{categoryId} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.token.email == 'mixorasmartshop@gmail.com';
-    }
-
     // অর্ডার কালেকশন রুলস
     match /orders/{orderId} {
       allow create: if true;
-      allow read, update, delete: if request.auth != null && request.auth.token.email == 'mixorasmartshop@gmail.com';
+      // ট্র্যাকিং এর জন্য নির্দিষ্ট অর্ডার আইডি দিয়ে রিড করার পারমিশন (Public Access for Get)
+      allow get: if true;
+      // অ্যাডমিন ছাড়া কেউ অর্ডার লিস্ট দেখতে পারবে না
+      allow list: if request.auth != null && request.auth.token.email == 'mixorasmartshop@gmail.com';
+      // আপডেট এবং ডিলিট শুধুমাত্র অ্যাডমিন করতে পারবে
+      allow update, delete: if request.auth != null && request.auth.token.email == 'mixorasmartshop@gmail.com';
+    }
+
+    // কুপন কালেকশন রুলস
+    match /coupons/{couponId} {
+      // চেকআউটে কুপন অ্যাপ্লাই করার জন্য রিড পারমিশন সবার জন্য উন্মুক্ত
+      allow read: if true;
+      // কুপন তৈরি বা ডিলিট শুধুমাত্র অ্যাডমিন করতে পারবে
+      allow write: if request.auth != null && request.auth.token.email == 'mixorasmartshop@gmail.com';
     }
   }
 }
